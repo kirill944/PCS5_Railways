@@ -4,6 +4,8 @@
 --  Подключение: psql -U postgres -d railway_booking -f data.sql
 -- ============================================================
 
+SET client_encoding TO 'UTF8';
+
 -- Очищаем таблицы перед загрузкой
 TRUNCATE TABLE bookings   RESTART IDENTITY CASCADE;
 TRUNCATE TABLE passengers RESTART IDENTITY CASCADE;
