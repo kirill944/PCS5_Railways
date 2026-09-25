@@ -1,5 +1,7 @@
 package ru.mirea.railway.util;
 
+import static ru.mirea.railway.util.Gradient.between;
+
 import ru.mirea.railway.exception.DatabaseException;
 
 import java.io.IOException;
@@ -26,6 +28,9 @@ import java.util.Properties;
  */
 public final class DatabaseManager {
 
+    private static final int[] PINK   = {255, 105, 180};
+    private static final int[] VIOLET = {138, 43, 226};
+
     private static final String CONFIG_FILE = "db.properties";
 
     private static DatabaseManager instance;
@@ -43,15 +48,15 @@ public final class DatabaseManager {
         String driver = props.getProperty("db.driver", "org.postgresql.Driver");
 
         if (url == null || user == null || password == null) {
-            throw new DatabaseException(
-                    "Не заданы параметры подключения в " + CONFIG_FILE);
+            throw new DatabaseException(between(
+                    "Не заданы параметры подключения в " + CONFIG_FILE, PINK, VIOLET));
         }
 
         try {
             Class.forName(driver);
         } catch (ClassNotFoundException e) {
-            throw new DatabaseException(
-                    "JDBC-драйвер не найден: " + driver, null);
+            throw new DatabaseException(between(
+                    "JDBC-драйвер не найден: " + driver, PINK, VIOLET), null);
         }
     }
 
@@ -71,8 +76,8 @@ public final class DatabaseManager {
         try {
             return DriverManager.getConnection(url, user, password);
         } catch (SQLException e) {
-            throw new DatabaseException(
-                    "Не удалось подключиться к БД: " + e.getMessage(), e);
+            throw new DatabaseException(between(
+                    "Не удалось подключиться к БД: " + e.getMessage(), PINK, VIOLET), e);
         }
     }
 
@@ -99,14 +104,14 @@ public final class DatabaseManager {
                 .getResourceAsStream(CONFIG_FILE)) {
 
             if (in == null) {
-                throw new DatabaseException(
-                        "Файл " + CONFIG_FILE + " не найден в classpath");
+                throw new DatabaseException(between(
+                        "Файл " + CONFIG_FILE + " не найден в classpath", PINK, VIOLET));
             }
             props.load(in);
             return props;
         } catch (IOException e) {
-            throw new DatabaseException(
-                    "Ошибка чтения " + CONFIG_FILE, null);
+            throw new DatabaseException(between(
+                    "Ошибка чтения " + CONFIG_FILE, PINK, VIOLET), null);
         }
     }
 }

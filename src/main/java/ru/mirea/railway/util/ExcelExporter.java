@@ -1,5 +1,7 @@
 package ru.mirea.railway.util;
 
+import static ru.mirea.railway.util.Gradient.between;
+
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import ru.mirea.railway.exception.DatabaseException;
@@ -19,6 +21,9 @@ import java.util.List;
  * и стилизованной шапкой.
  */
 public final class ExcelExporter {
+
+    private static final int[] PINK   = {255, 105, 180};
+    private static final int[] VIOLET = {138, 43, 226};
 
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("dd.MM.yyyy");
@@ -44,7 +49,8 @@ public final class ExcelExporter {
      */
     public static int exportBookings(List<Booking> bookings, String filePath) {
         if (bookings == null) {
-            throw new DatabaseException("Список броней для экспорта не может быть null");
+            throw new DatabaseException(between(
+                    "Список броней для экспорта не может быть null", PINK, VIOLET));
         }
 
         Path path = Path.of(filePath);
@@ -54,8 +60,8 @@ public final class ExcelExporter {
                 Files.createDirectories(parent);
             }
         } catch (IOException e) {
-            throw new DatabaseException(
-                    "Не удалось создать директорию для экспорта: " + e.getMessage(), null);
+            throw new DatabaseException(between(
+                    "Не удалось создать директорию для экспорта: " + e.getMessage(), PINK, VIOLET), null);
         }
 
         try (Workbook workbook = new XSSFWorkbook();
@@ -81,8 +87,8 @@ public final class ExcelExporter {
             return bookings.size();
 
         } catch (IOException e) {
-            throw new DatabaseException(
-                    "Ошибка экспорта в Excel: " + e.getMessage(), null);
+            throw new DatabaseException(between(
+                    "Ошибка экспорта в Excel: " + e.getMessage(), PINK, VIOLET), null);
         }
     }
 

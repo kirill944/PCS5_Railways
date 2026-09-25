@@ -1,5 +1,8 @@
 package ru.mirea.railway.ui;
 
+import static ru.mirea.railway.util.Ansi.*;
+import static ru.mirea.railway.util.Gradient.*;
+
 import ru.mirea.railway.exception.BusinessException;
 import ru.mirea.railway.exception.DatabaseException;
 import ru.mirea.railway.exception.EntityNotFoundException;
@@ -22,7 +25,7 @@ import java.util.Scanner;
 public class PassengerMenu {
 
     private static final DateTimeFormatter DATE_FMT =
-            DateTimeFormatter.ofPattern("dd.MM.yyyy");
+            DateTimeFormatter.ofPattern("dd.mm.yyyy");
 
     /** Телефон: строго +7 и ровно 10 цифр. */
     private static final String PHONE_REGEX = "^\\+7\\d{10}$";
@@ -41,10 +44,13 @@ public class PassengerMenu {
         this.service = service;
     }
 
+    private static final int[] PINK = {255, 105, 180};
+    private static final int[] VIOLET = {138, 43, 226};
+
     public void show() {
         while (true) {
             printMenu();
-            Integer choice = InputValidator.readInt(scanner, "Выберите действие: ");
+            Integer choice = InputValidator.readInt(scanner, between("Выберите действие: ", PINK, VIOLET));
             if (choice == null) {
                 continue;
             }
@@ -60,23 +66,23 @@ public class PassengerMenu {
                     case 0 -> {
                         return;
                     }
-                    default -> System.out.println("⚠ Неизвестный пункт меню");
+                    default -> System.out.println(color("⚠ Неизвестный пункт меню", YELLOW));
                 }
             } catch (BusinessException e) {
-                System.out.println("✖ Нарушено правило: " + e.getMessage());
+                System.out.println(color("✖ Нарушено правило: " + e.getMessage(), RED));
             } catch (EntityNotFoundException e) {
-                System.out.println("⚠ " + e.getMessage());
+                System.out.println(color("⚠ " + e.getMessage(), YELLOW));
             } catch (DatabaseException e) {
-                System.out.println("✖ Ошибка БД: " + e.getMessage());
+                System.out.println(color("✖ Ошибка БД: " + e.getMessage(), RED));
             } catch (Exception e) {
-                System.out.println("✖ Непредвиденная ошибка: " + e.getMessage());
+                System.out.println(color("✖ Непредвиденная ошибка: " + e.getMessage(), RED));
             }
             System.out.println();
         }
     }
 
     private void printMenu() {
-        System.out.println("""
+        System.out.println(between("""
                 ============ ПАССАЖИРЫ ============
                 1. Добавить пассажира
                 2. Показать всех
@@ -86,32 +92,32 @@ public class PassengerMenu {
                 6. Поиск по ФИО
                 0. Назад
                 ===================================
-                """);
+                """, PINK, VIOLET));
     }
 
     private void createPassenger() {
-        System.out.println("── Создание пассажира ──");
+        System.out.println(between("── Создание пассажира ──", PINK, VIOLET));
 
-        String fullName = InputValidator.readRegex(scanner, "ФИО: ",
+        String fullName = InputValidator.readRegex(scanner, between("ФИО: ", PINK, VIOLET),
                 "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$",
                 "Неверный формат ФИО. Допускаются буквы, пробелы и дефис (от 3 символов).");
 
-        String passport = InputValidator.readRegex(scanner, "Серия и номер паспорта: ",
+        String passport = InputValidator.readRegex(scanner, between("Серия и номер паспорта: ", PINK, VIOLET),
                 "^\\d{4}\\s\\d{6}$",
                 "Неверный ввод паспорта. Ожидается формат: серия (4 цифры) номер (6 цифр), например: 1234 123456.");
 
-        String email = InputValidator.readRegex(scanner, "Email: ",
+        String email = InputValidator.readRegex(scanner, between("Email: ", PINK, VIOLET),
                 "^[\\w.+-]+@[\\w-]+\\.[\\w.-]+$",
                 "Неверный ввод email. Ожидается формат 'name@domain.ru'.");
 
-        String phone = InputValidator.readRegex(scanner, "Телефон (+7XXXXXXXXXX): ",
+        String phone = InputValidator.readRegex(scanner, between("Телефон (+7XXXXXXXXXX): ", PINK, VIOLET),
                 PHONE_REGEX, PHONE_ERROR);
 
         LocalDate birth = readBirthDate();
 
         Passenger p = new Passenger(fullName, passport, email, phone, birth);
         Passenger saved = service.create(p);
-        System.out.println("✔ Пассажир создан с ID=" + saved.getId());
+        System.out.println(between("✔ Пассажир создан с ID=" + saved.getId(), PINK, VIOLET));
     }
 
     private void listAll() {
@@ -120,7 +126,7 @@ public class PassengerMenu {
     }
 
     private void findById() {
-        Long id = InputValidator.readLong(scanner, "ID пассажира: ");
+        Long id = InputValidator.readLong(scanner, between("ID пассажира: ", PINK, VIOLET));
         if (id == null) {
             return;
         }
@@ -129,27 +135,27 @@ public class PassengerMenu {
     }
 
     private void updatePassenger() {
-        Long id = InputValidator.readLong(scanner, "ID пассажира для редактирования: ");
+        Long id = InputValidator.readLong(scanner, between("ID пассажира для редактирования: ", PINK, VIOLET));
         if (id == null) {
             return;
         }
         Passenger existing = service.findById(id);
 
-        System.out.println("Текущее ФИО: " + existing.getFullName());
+        System.out.println(between("Текущее ФИО: " + existing.getFullName(), PINK, VIOLET));
 
-        String fullName = InputValidator.readRegex(scanner, "Новое ФИО: ",
+        String fullName = InputValidator.readRegex(scanner, between("Новое ФИО: ", PINK, VIOLET),
                 "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$",
                 "Неверный формат ФИО.");
 
-        String passport = InputValidator.readRegex(scanner, "Новый паспорт (серия (4 цифры) номер (6 цифр)): ",
+        String passport = InputValidator.readRegex(scanner, between("Новый паспорт (серия (4 цифры) номер (6 цифр)): ", PINK, VIOLET),
                 "^\\d{4}\\s\\d{6}$",
                 "Неверный ввод паспорта. Ожидается формат: серия (4 цифры) номер (6 цифр), например: 1234 123456.");
 
-        String email = InputValidator.readRegex(scanner, "Новый email: ",
+        String email = InputValidator.readRegex(scanner, between("Новый email: ", PINK, VIOLET),
                 "^[\\w.+-]+@[\\w-]+\\.[\\w.-]+$",
                 "Неверный ввод email.");
 
-        String phone = InputValidator.readRegex(scanner, "Новый телефон (+7XXXXXXXXXX): ",
+        String phone = InputValidator.readRegex(scanner, between("Новый телефон (+7XXXXXXXXXX): ", PINK, VIOLET),
                 PHONE_REGEX, PHONE_ERROR);
 
         LocalDate birth = readBirthDate();
@@ -161,26 +167,27 @@ public class PassengerMenu {
         existing.setBirthDate(birth);
 
         service.update(existing);
-        System.out.println("✔ Пассажир обновлён");
+        System.out.println(between("✔ Пассажир обновлён", PINK, VIOLET));
     }
 
     private void deletePassenger() {
-        Long id = InputValidator.readLong(scanner, "ID пассажира для удаления: ");
+        Long id = InputValidator.readLong(scanner, between("ID пассажира для удаления: ", PINK, VIOLET));
         if (id == null) {
             return;
         }
         service.findById(id);
 
-        if (!InputValidator.confirm(scanner, "Удалить пассажира и все его брони?")) {
-            System.out.println("Отменено");
+        if (!InputValidator.confirm(scanner,
+                between("Удалить пассажира и все его брони?", PINK, VIOLET))) {
+            System.out.println(between("Отменено", PINK, VIOLET));
             return;
         }
         service.delete(id);
-        System.out.println("✔ Пассажир удалён");
+        System.out.println(between("✔ Пассажир удалён", PINK, VIOLET));
     }
 
     private void searchByName() {
-        String fragment = InputValidator.readNonEmptyString(scanner, "Фрагмент ФИО: ");
+        String fragment = InputValidator.readNonEmptyString(scanner, between("Фрагмент ФИО: ", PINK, VIOLET));
         List<Passenger> found = service.searchByFullName(fragment);
         TablePrinter.printPassengers(found);
     }
@@ -195,7 +202,7 @@ public class PassengerMenu {
         LocalDate minDate = LocalDate.now().minusYears(MAX_AGE);
 
         String line = InputValidator.readValidated(scanner,
-                "Дата рождения (dd.MM.yyyy): ", s -> {
+                between("Дата рождения (dd.mm.yyyy): ", PINK, VIOLET), s -> {
                     try {
                         LocalDate d = LocalDate.parse(s, DATE_FMT);
 
@@ -208,7 +215,7 @@ public class PassengerMenu {
                         }
                         return null;
                     } catch (Exception e) {
-                        return "Неверный формат даты. Ожидается dd.MM.yyyy.";
+                        return "Неверный формат даты. Ожидается dd.mm.yyyy.";
                     }
                 });
         return LocalDate.parse(line, DATE_FMT);

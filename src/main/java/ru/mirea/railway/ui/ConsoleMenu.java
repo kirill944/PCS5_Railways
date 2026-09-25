@@ -1,5 +1,8 @@
 package ru.mirea.railway.ui;
 
+import static ru.mirea.railway.util.Ansi.*;
+import static ru.mirea.railway.util.Gradient.*;
+
 import ru.mirea.railway.exception.BusinessException;
 import ru.mirea.railway.exception.DatabaseException;
 import ru.mirea.railway.exception.EntityNotFoundException;
@@ -25,21 +28,21 @@ public class ConsoleMenu {
     private final Scanner scanner = new Scanner(System.in);
 
     private final PassengerService passengerService = new PassengerService();
-    private final BookingService bookingService     = new BookingService();
+    private final BookingService bookingService = new BookingService();
     private final StatisticsService statisticsService = new StatisticsService();
 
     public void run() {
         printBanner();
 
         if (!DatabaseManager.getInstance().isAvailable()) {
-            System.out.println("✖ База данных недоступна. Проверьте db.properties и PostgreSQL.");
+            System.out.println(color("✖ База данных недоступна. Проверьте db.properties и PostgreSQL.", RED));
             return;
         }
-        System.out.println("✔ Подключение к БД установлено\n");
+        System.out.println(between("✔ Подключение к БД установлено\n", PINK, VIOLET));
 
         while (true) {
             printMainMenu();
-            Integer choice = InputValidator.readInt(scanner, "Выберите действие: ");
+            Integer choice = InputValidator.readInt(scanner, between("Выберите действие: ", PINK, VIOLET));
             if (choice == null) continue;
 
             try {
@@ -53,34 +56,40 @@ public class ConsoleMenu {
                     case 7 -> exportToExcel();
                     case 8 -> showDatabaseTables();
                     case 0 -> {
-                        System.out.println("До свидания!");
+                        System.out.println(between("До свидания!", PINK, VIOLET));
                         return;
                     }
-                    default -> System.out.println("⚠ Неизвестный пункт меню");
+                    default -> System.out.println(color("⚠ Неизвестный пункт меню", YELLOW));
                 }
             } catch (BusinessException e) {
-                System.out.println("✖ Нарушено правило: " + e.getMessage());
+                System.out.println(color("✖ Нарушено правило: " + e.getMessage(), RED));
             } catch (EntityNotFoundException e) {
-                System.out.println("⚠ " + e.getMessage());
+                System.out.println(color("⚠ " + e.getMessage(), YELLOW));
             } catch (DatabaseException e) {
-                System.out.println("✖ Ошибка БД: " + e.getMessage());
+                System.out.println(color("✖ Ошибка БД: " + e.getMessage(), RED));
             } catch (Exception e) {
-                System.out.println("✖ Непредвиденная ошибка: " + e.getMessage());
+                System.out.println(color("✖ Непредвиденная ошибка: " + e.getMessage(), RED));
             }
             System.out.println();
         }
     }
 
+    private static final int[] PINK = {255, 105, 180};   // #FF69B4
+    private static final int[] DEEP_PINK = {199, 21, 133};   // #C71585
+    private static final int[] VIOLET = {138, 43, 226};   // #8A2BE2
+    private static final int[] CYAN = {0, 255, 255};
+
     private void printBanner() {
-        System.out.println("""
+
+        System.out.println(between("""
                 ========================================
                    СИСТЕМА БРОНИРОВАНИЯ Ж/Д БИЛЕТОВ
                 ========================================
-                """);
+                """, PINK, VIOLET));
     }
 
     private void printMainMenu() {
-        System.out.println("""
+        System.out.println(between("""
                 ================ ГЛАВНОЕ МЕНЮ ================
                 1. Пассажиры
                 2. Бронирования
@@ -92,7 +101,7 @@ public class ConsoleMenu {
                 8. Вывести таблицы базы данных
                 0. Выход
                 ==============================================
-                """);
+                """, PINK, VIOLET));
     }
 
     // =========================================================
@@ -100,30 +109,33 @@ public class ConsoleMenu {
     // =========================================================
 
     private void searchMenu() {
-        System.out.println("""
+        System.out.println(between("""
                 ──── ПОИСК ────
                 1. По номеру поезда
                 2. По маршруту
                 3. По ФИО пассажира
                 4. По номеру паспорта
                 0. Назад
-                """);
-        Integer choice = InputValidator.readInt(scanner, "Выберите: ");
+                """, PINK, VIOLET));
+        Integer choice = InputValidator.readInt(scanner, between("Выберите: ", PINK, VIOLET));
         if (choice == null) return;
 
         List<Booking> result = switch (choice) {
             case 1 -> bookingService.searchByTrainNumber(
-                    InputValidator.readNonEmptyString(scanner, "Номер поезда: "));
+                    InputValidator.readNonEmptyString(scanner, between("Номер поезда: ", PINK, VIOLET)));
             case 2 -> {
-                String from = InputValidator.readString(scanner, "Откуда (Enter — пропустить): ");
-                String to   = InputValidator.readString(scanner, "Куда (Enter — пропустить): ");
+                String from = InputValidator.readString(scanner, between("Откуда (Enter — пропустить): ", PINK, VIOLET));
+                String to = InputValidator.readString(scanner, between("Куда (Enter — пропустить): ", PINK, VIOLET));
                 yield bookingService.searchByRoute(from, to);
             }
             case 3 -> bookingService.searchByPassengerName(
-                    InputValidator.readNonEmptyString(scanner, "Фрагмент ФИО: "));
+                    InputValidator.readNonEmptyString(scanner, between("Фрагмент ФИО: ", PINK, VIOLET)));
             case 4 -> bookingService.searchByPassengerPassport(
-                    InputValidator.readNonEmptyString(scanner, "Номер паспорта: "));
-            default -> { System.out.println("Отменено"); yield List.of(); }
+                    InputValidator.readNonEmptyString(scanner, between("Номер паспорта: ", PINK, VIOLET)));
+            default -> {
+                System.out.println(between("Отменено", PINK, VIOLET));
+                yield List.of();
+            }
         };
         TablePrinter.printBookings(result);
     }
@@ -133,32 +145,35 @@ public class ConsoleMenu {
     // =========================================================
 
     private void filterMenu() {
-        System.out.println("""
+        System.out.println(between("""
                 ──── ФИЛЬТРАЦИЯ ────
                 1. По статусу
                 2. По пассажиру
                 3. По диапазону дат
                 0. Назад
-                """);
-        Integer choice = InputValidator.readInt(scanner, "Выберите: ");
+                """, PINK, VIOLET));
+        Integer choice = InputValidator.readInt(scanner, between("Выберите: ", PINK, VIOLET));
         if (choice == null) return;
 
         List<Booking> result = switch (choice) {
             case 1 -> {
-                System.out.println("Статусы: CREATED, CONFIRMED, PAID, COMPLETED, CANCELLED");
-                String s = InputValidator.readNonEmptyString(scanner, "Статус: ");
+                System.out.println(between("Статусы: CREATED, CONFIRMED, PAID, COMPLETED, CANCELLED", PINK, VIOLET));
+                String s = InputValidator.readNonEmptyString(scanner, between("Статус: ", PINK, VIOLET));
                 yield bookingService.filterByStatus(BookingStatus.fromString(s));
             }
             case 2 -> {
-                long pid = InputValidator.readLongRequired(scanner, "ID пассажира: ");
+                long pid = InputValidator.readLongRequired(scanner, between("ID пассажира: ", PINK, VIOLET));
                 yield bookingService.filterByPassenger(pid);
             }
             case 3 -> {
-                LocalDate from = InputValidator.readDateRequired(scanner, "Дата от");
-                LocalDate to   = InputValidator.readDateRequired(scanner, "Дата до");
+                LocalDate from = InputValidator.readDateRequired(scanner, between("Дата от", PINK, VIOLET));
+                LocalDate to = InputValidator.readDateRequired(scanner, between("Дата до", PINK, VIOLET));
                 yield bookingService.filterByDateRange(from, to);
             }
-            default -> { System.out.println("Отменено"); yield List.of(); }
+            default -> {
+                System.out.println(between("Отменено", PINK, VIOLET));
+                yield List.of();
+            }
         };
         TablePrinter.printBookings(result);
     }
@@ -168,7 +183,7 @@ public class ConsoleMenu {
     // =========================================================
 
     private void sortMenu() {
-        System.out.println("""
+        System.out.println(between("""
                 ──── СОРТИРОВКА ────
                 1. По дате отправления (возр.)
                 2. По дате отправления (убыв.)
@@ -177,8 +192,8 @@ public class ConsoleMenu {
                 5. По номеру поезда
                 6. По статусу
                 0. Назад
-                """);
-        Integer choice = InputValidator.readInt(scanner, "Выберите: ");
+                """, PINK, VIOLET));
+        Integer choice = InputValidator.readInt(scanner, between("Выберите: ", PINK, VIOLET));
         if (choice == null) return;
 
         List<Booking> result = switch (choice) {
@@ -188,7 +203,10 @@ public class ConsoleMenu {
             case 4 -> bookingService.sortByPrice(false);
             case 5 -> bookingService.sortByTrainNumber();
             case 6 -> bookingService.sortByStatus();
-            default -> { System.out.println("Отменено"); yield List.of(); }
+            default -> {
+                System.out.println(between("Отменено", PINK, VIOLET));
+                yield List.of();
+            }
         };
         TablePrinter.printBookings(result);
     }
@@ -199,19 +217,29 @@ public class ConsoleMenu {
 
     private void showStatistics() {
         StatisticsService.Statistics stats = statisticsService.collect();
-        System.out.println("""
-                ╔════════════════════ СТАТИСТИКА ════════════════════╗""");
-        System.out.printf("║ Всего пассажиров:          %-23d║%n", stats.totalPassengers());
-        System.out.printf("║ Всего бронирований:        %-23d║%n", stats.totalBookings());
-        System.out.printf("║ Активных (CREATED/CONF/PAID): %-20d║%n", stats.activeBookings());
-        System.out.printf("║ Завершённых (COMPLETED):   %-23d║%n", stats.completedBookings());
-        System.out.printf("║ Отменённых (CANCELLED):    %-23d║%n", stats.cancelledBookings());
-        System.out.printf("║ Средняя цена билета:       %-23s║%n", stats.averagePrice() + " ₽");
-        System.out.println("╠═══════════════════════════════════════════════════╣");
-        System.out.println("║ Брони по поездам:                                 ║");
+        System.out.println(between(
+                "╔════════════════════ СТАТИСТИКА ════════════════════╗", PINK, VIOLET));
+        System.out.println(between(String.format(
+                "║ Всего пассажиров:          %-23d║", stats.totalPassengers()), PINK, VIOLET));
+        System.out.println(between(String.format(
+                "║ Всего бронирований:        %-23d║", stats.totalBookings()), PINK, VIOLET));
+        System.out.println(between(String.format(
+                "║ Активных (CREATED/CONF/PAID): %-20d║", stats.activeBookings()), PINK, VIOLET));
+        System.out.println(between(String.format(
+                "║ Завершённых (COMPLETED):   %-23d║", stats.completedBookings()), PINK, VIOLET));
+        System.out.println(between(String.format(
+                "║ Отменённых (CANCELLED):    %-23d║", stats.cancelledBookings()), PINK, VIOLET));
+        System.out.println(between(String.format(
+                "║ Средняя цена билета:       %-23s║", stats.averagePrice() + " ₽"), PINK, VIOLET));
+        System.out.println(between(
+                "╠═══════════════════════════════════════════════════╣", PINK, VIOLET));
+        System.out.println(between(
+                "║ Брони по поездам:                                 ║", PINK, VIOLET));
         stats.bookingsByTrain().forEach((train, count) ->
-                System.out.printf("║   %-10s  →  %-32d║%n", train, count));
-        System.out.println("╚═══════════════════════════════════════════════════╝");
+                System.out.println(between(String.format(
+                        "║   %-10s  →  %-32d║", train, count), PINK, VIOLET)));
+        System.out.println(between(
+                "╚═══════════════════════════════════════════════════╝", PINK, VIOLET));
     }
 
     // =========================================================
@@ -221,7 +249,7 @@ public class ConsoleMenu {
     private void exportToExcel() {
         String path = "export/bookings.xlsx";
         int count = ExcelExporter.exportBookings(bookingService.findAll(), path);
-        System.out.println("✔ Экспортировано " + count + " записей в " + path);
+        System.out.println(between("✔ Экспортировано " + count + " записей в " + path, PINK, VIOLET));
     }
 
     // =========================================================
@@ -232,10 +260,10 @@ public class ConsoleMenu {
         List<Passenger> passengers = passengerService.findAll();
         List<Booking> bookings = bookingService.findAll();
 
-        System.out.println("──── Таблица passengers ────");
+        System.out.println(between("──── Таблица passengers ────", PINK, VIOLET));
         TablePrinter.printPassengers(passengers);
         System.out.println();
-        System.out.println("──── Таблица bookings ────");
+        System.out.println(between("──── Таблица bookings ────", PINK, VIOLET));
         TablePrinter.printBookings(bookings);
     }
 }

@@ -1,5 +1,7 @@
 package ru.mirea.railway.util;
 
+import static ru.mirea.railway.util.Ansi.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -43,7 +45,7 @@ public final class InputValidator {
             if (error == null) {
                 return line;
             }
-            System.out.println("⚠ " + error + " Введите ещё раз:");
+            System.out.println(color("⚠ " + error + " Введите ещё раз:", YELLOW));
         }
     }
 
@@ -68,7 +70,7 @@ public final class InputValidator {
         try {
             return Integer.parseInt(line);
         } catch (NumberFormatException e) {
-            System.out.println("⚠ Ошибка: ожидалось целое число, получено: '" + line + "'");
+            System.out.println(color("⚠ Ошибка: ожидалось целое число, получено: '" + line + "'", YELLOW));
             return null;
         }
     }
@@ -88,7 +90,7 @@ public final class InputValidator {
         try {
             return Long.parseLong(line);
         } catch (NumberFormatException e) {
-            System.out.println("⚠ Ошибка: ожидалось целое число, получено: '" + line + "'");
+            System.out.println(color("⚠ Ошибка: ожидалось целое число, получено: '" + line + "'", YELLOW));
             return null;
         }
     }
@@ -109,7 +111,7 @@ public final class InputValidator {
             if (!line.isEmpty()) {
                 return line;
             }
-            System.out.println("⚠ Ошибка: строка не может быть пустой");
+            System.out.println(color("⚠ Ошибка: строка не может быть пустой", YELLOW));
         }
     }
 
@@ -124,8 +126,8 @@ public final class InputValidator {
         try {
             return LocalDate.parse(line, DATE_FMT);
         } catch (DateTimeParseException e) {
-            System.out.println("⚠ Ошибка: некорректная дата '" + line
-                    + "'. Ожидается dd.MM.yyyy");
+            System.out.println(color("⚠ Ошибка: некорректная дата '" + line
+                    + "'. Ожидается dd.MM.yyyy", YELLOW));
             return null;
         }
     }
@@ -145,8 +147,8 @@ public final class InputValidator {
         try {
             return LocalTime.parse(line, TIME_FMT);
         } catch (DateTimeParseException e) {
-            System.out.println("⚠ Ошибка: некорректное время '" + line
-                    + "'. Ожидается HH:mm");
+            System.out.println(color("⚠ Ошибка: некорректное время '" + line
+                    + "'. Ожидается HH:mm", YELLOW));
             return null;
         }
     }
@@ -166,7 +168,7 @@ public final class InputValidator {
         try {
             return new BigDecimal(line);
         } catch (NumberFormatException e) {
-            System.out.println("⚠ Ошибка: ожидалось число, получено: '" + line + "'");
+            System.out.println(color("⚠ Ошибка: ожидалось число, получено: '" + line + "'", YELLOW));
             return null;
         }
     }
@@ -203,8 +205,8 @@ public final class InputValidator {
                 return false;
             }
 
-            System.out.println("⚠ Неверный ввод: '" + line
-                    + "'. Допустимы только 'y' (да) или 'n' (нет). Попробуйте снова:");
+            System.out.println(color("⚠ Неверный ввод: '" + line
+                    + "'. Допустимы только 'y' (да) или 'n' (нет). Попробуйте снова:", YELLOW));
         }
     }
 
