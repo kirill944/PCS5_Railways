@@ -22,7 +22,7 @@ import java.util.Scanner;
 public class PassengerMenu {
 
     private static final DateTimeFormatter DATE_FMT =
-            DateTimeFormatter.ofPattern("dd.mm.yyyy");
+            DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
     /** Телефон: строго +7 и ровно 10 цифр. */
     private static final String PHONE_REGEX = "^\\+7\\d{10}$";
@@ -195,7 +195,7 @@ public class PassengerMenu {
         LocalDate minDate = LocalDate.now().minusYears(MAX_AGE);
 
         String line = InputValidator.readValidated(scanner,
-                "Дата рождения (dd.mm.yyyy): ", s -> {
+                "Дата рождения (dd.MM.yyyy): ", s -> {
                     try {
                         LocalDate d = LocalDate.parse(s, DATE_FMT);
 
@@ -208,7 +208,7 @@ public class PassengerMenu {
                         }
                         return null;
                     } catch (Exception e) {
-                        return "Неверный формат даты. Ожидается dd.mm.yyyy.";
+                        return "Неверный формат даты. Ожидается dd.MM.yyyy.";
                     }
                 });
         return LocalDate.parse(line, DATE_FMT);
