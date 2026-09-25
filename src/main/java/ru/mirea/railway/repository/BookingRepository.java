@@ -12,7 +12,7 @@ import java.util.Optional;
  */
 public interface BookingRepository {
 
-    // --- CRUD ---
+    // CRUD
 
     Booking save(Booking booking);
 
@@ -24,7 +24,7 @@ public interface BookingRepository {
 
     List<Booking> findAll();
 
-    // --- Поиск ---
+    // Поиск
 
     /** Поиск по номеру поезда (частичное совпадение). */
     List<Booking> findByTrainNumber(String trainNumber);
@@ -38,7 +38,7 @@ public interface BookingRepository {
     /** Поиск по номеру паспорта пассажира (JOIN). */
     List<Booking> findByPassengerPassport(String passportNumber);
 
-    // --- Фильтрация ---
+    // Фильтрация
 
     List<Booking> findByStatus(BookingStatus status);
 
@@ -46,7 +46,7 @@ public interface BookingRepository {
 
     List<Booking> findByDepartureDateBetween(LocalDate from, LocalDate to);
 
-    // --- Проверки ---
+    // Проверки
 
     /** Занято ли место на конкретный поезд/вагон/дату. */
     boolean isSeatTaken(String trainNumber, int wagonNumber,
@@ -54,7 +54,7 @@ public interface BookingRepository {
 
     boolean existsById(Long id);
 
-    // --- Статистика ---
+    // Статистика
 
     long count();
 

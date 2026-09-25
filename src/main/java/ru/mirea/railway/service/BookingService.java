@@ -57,9 +57,7 @@ public class BookingService {
         this.passengerRepository = passengerRepository;
     }
 
-    // =========================================================
     //  CREATE
-    // =========================================================
 
     public Booking create(Booking booking) {
         validateCommon(booking);
@@ -83,9 +81,7 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
-    // =========================================================
     //  UPDATE
-    // =========================================================
 
     public void update(Booking booking) {
         if (booking.getId() == null) {
@@ -116,9 +112,7 @@ public class BookingService {
         bookingRepository.update(booking);
     }
 
-    // =========================================================
     //  DELETE
-    // =========================================================
 
     public void delete(Long id) {
         if (!bookingRepository.existsById(id)) {
@@ -127,9 +121,7 @@ public class BookingService {
         bookingRepository.deleteById(id);
     }
 
-    // =========================================================
     //  READ
-    // =========================================================
 
     public Booking findById(Long id) {
         return bookingRepository.findById(id)
@@ -152,9 +144,7 @@ public class BookingService {
         return bookingRepository.isSeatTaken(trainNumber, wagonNumber, seatNumber, departureDate);
     }
 
-    // =========================================================
     //  СМЕНА СТАТУСА
-    // =========================================================
 
     public void changeStatus(Long bookingId, BookingStatus newStatus) {
         Booking booking = findById(bookingId);
@@ -168,9 +158,7 @@ public class BookingService {
         bookingRepository.update(booking);
     }
 
-    // =========================================================
     //  ПОИСК
-    // =========================================================
 
     public List<Booking> searchByTrainNumber(String trainNumber) {
         requireNonBlank(trainNumber, "Номер поезда");
@@ -194,9 +182,7 @@ public class BookingService {
         return bookingRepository.findByPassengerPassport(passport);
     }
 
-    // =========================================================
     //  ФИЛЬТРАЦИЯ
-    // =========================================================
 
     public List<Booking> filterByStatus(BookingStatus status) {
         if (status == null) {
@@ -222,9 +208,7 @@ public class BookingService {
         return bookingRepository.findByDepartureDateBetween(from, to);
     }
 
-    // =========================================================
     //  СОРТИРОВКА
-    // =========================================================
 
     public List<Booking> sortByDepartureDate(boolean ascending) {
         Comparator<Booking> cmp = Comparator.comparing(Booking::getDepartureDate)
@@ -255,9 +239,7 @@ public class BookingService {
                 .collect(Collectors.toList());
     }
 
-    // =========================================================
     //  Внутренние проверки
-    // =========================================================
 
     private void validateCommon(Booking b) {
         if (b == null) {

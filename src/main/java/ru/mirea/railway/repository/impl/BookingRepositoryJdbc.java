@@ -16,12 +16,8 @@ import java.util.Optional;
 
 /**
  * JDBC-реализация BookingRepository.
- *
- * Демонстрирует:
- *   - PreparedStatement с параметрами;
- *   - try-with-resources;
- *   - JOIN с таблицей passengers (поиск по ФИО/паспорту);
- *   - маппинг ResultSet -> объект Booking.
+ * Все запросы параметризованы (PreparedStatement) — защита от SQL-инъекций.
+ * Соединения и ResultSet закрываются через try-with-resources.
  */
 public class BookingRepositoryJdbc implements BookingRepository {
 
@@ -39,9 +35,7 @@ public class BookingRepositoryJdbc implements BookingRepository {
         this.db = DatabaseManager.getInstance();
     }
 
-    // =========================================================
     //  CREATE
-    // =========================================================
 
     @Override
     public Booking save(Booking booking) {
@@ -83,9 +77,7 @@ public class BookingRepositoryJdbc implements BookingRepository {
         }
     }
 
-    // =========================================================
     //  UPDATE
-    // =========================================================
 
     @Override
     public void update(Booking booking) {
@@ -131,9 +123,7 @@ public class BookingRepositoryJdbc implements BookingRepository {
         }
     }
 
-    // =========================================================
     //  DELETE
-    // =========================================================
 
     @Override
     public void deleteById(Long id) {
@@ -151,9 +141,7 @@ public class BookingRepositoryJdbc implements BookingRepository {
         }
     }
 
-    // =========================================================
     //  READ
-    // =========================================================
 
     @Override
     public Optional<Booking> findById(Long id) {
@@ -167,9 +155,7 @@ public class BookingRepositoryJdbc implements BookingRepository {
         return findList(sql, ps -> {});
     }
 
-    // =========================================================
     //  ПОИСК
-    // =========================================================
 
     @Override
     public List<Booking> findByTrainNumber(String trainNumber) {
@@ -222,9 +208,7 @@ public class BookingRepositoryJdbc implements BookingRepository {
         return findList(sql, ps -> ps.setString(1, passportNumber));
     }
 
-    // =========================================================
     //  ФИЛЬТРАЦИЯ
-    // =========================================================
 
     @Override
     public List<Booking> findByStatus(BookingStatus status) {
@@ -248,9 +232,7 @@ public class BookingRepositoryJdbc implements BookingRepository {
         });
     }
 
-    // =========================================================
     //  ПРОВЕРКИ
-    // =========================================================
 
     @Override
     public boolean isSeatTaken(String trainNumber, int wagonNumber,
@@ -300,9 +282,7 @@ public class BookingRepositoryJdbc implements BookingRepository {
         }
     }
 
-    // =========================================================
     //  СТАТИСТИКА
-    // =========================================================
 
     @Override
     public long count() {
@@ -315,9 +295,7 @@ public class BookingRepositoryJdbc implements BookingRepository {
                 ps -> ps.setString(1, status.name()));
     }
 
-    // =========================================================
     //  Внутренние методы
-    // =========================================================
 
     @FunctionalInterface
     private interface StatementSetter {

@@ -1,18 +1,10 @@
--- ============================================================
---  Railway Booking System — тестовые данные
---  Файл: data.sql
---  Подключение: psql -U postgres -d railway_booking -f data.sql
--- ============================================================
-
 SET client_encoding TO 'UTF8';
 
 -- Очищаем таблицы перед загрузкой
 TRUNCATE TABLE bookings   RESTART IDENTITY CASCADE;
 TRUNCATE TABLE passengers RESTART IDENTITY CASCADE;
 
--- ============================================================
 --  Пассажиры (6 записей)
--- ============================================================
 INSERT INTO passengers (full_name, passport_number, email, phone, birth_date) VALUES
                                                                                   ('Иванов Иван Иванович',       '4501 123456', 'ivanov@mail.ru',    '+79001112233', '1985-03-15'),
                                                                                   ('Петрова Анна Сергеевна',     '4502 234567', 'petrova@yandex.ru', '+79002223344', '1990-07-22'),
@@ -21,11 +13,9 @@ INSERT INTO passengers (full_name, passport_number, email, phone, birth_date) VA
                                                                                   ('Смирнов Алексей Олегович',   '4505 567890', 'smirnov@bk.ru',     '+79005556677', '1982-09-12'),
                                                                                   ('Волкова Екатерина Игоревна', '4506 678901', 'volkova@list.ru',   '+79006667788', '2000-05-19');
 
--- ============================================================
 --  Бронирования (15 записей)
 --  Покрывают все статусы: CREATED, CONFIRMED, PAID, COMPLETED, CANCELLED
 --  Разные поезда, маршруты, даты, вагоны, места, цены
--- ============================================================
 INSERT INTO bookings
 (passenger_id, train_number, route_from, route_to, departure_date,
  departure_time, wagon_number, seat_number, price, status, created_at)
@@ -59,9 +49,7 @@ VALUES
 -- Дополнительная запись для демонстрации фильтра по диапазону дат
 (2, '135Р', 'Москва',        'Ростов-на-Дону',  '2025-10-05', '18:20:00', 8, 36, 4900.00, 'CREATED',   '2025-05-22 14:00:00');
 
--- ============================================================
 --  Проверка загруженных данных
--- ============================================================
 -- SELECT COUNT(*) AS passengers_count FROM passengers;  -- 6
 -- SELECT COUNT(*) AS bookings_count   FROM bookings;    -- 15
 -- SELECT status, COUNT(*) FROM bookings GROUP BY status;

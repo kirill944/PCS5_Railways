@@ -92,9 +92,7 @@ public final class ExcelExporter {
         }
     }
 
-    // =========================================================
     //  Внутренние методы
-    // =========================================================
 
     private static void createHeaderRow(Sheet sheet, CellStyle style) {
         Row header = sheet.createRow(0);

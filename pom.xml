@@ -6,9 +6,7 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- ============================================================ -->
     <!--  Координаты проекта                                          -->
-    <!-- ============================================================ -->
     <groupId>ru.mirea</groupId>
     <artifactId>railway-booking</artifactId>
     <version>1.0.0</version>
@@ -17,9 +15,7 @@
     <name>Railway Booking System</name>
     <description>Консольная ИС бронирования Ж/Д билетов (КР 1)</description>
 
-    <!-- ============================================================ -->
     <!--  Свойства                                                    -->
-    <!-- ============================================================ -->
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -42,9 +38,7 @@
         <exec.plugin.version>3.5.0</exec.plugin.version>
     </properties>
 
-    <!-- ============================================================ -->
     <!--  Зависимости                                                 -->
-    <!-- ============================================================ -->
     <dependencies>
 
         <!-- PostgreSQL JDBC -->
@@ -94,9 +88,7 @@
         </dependency>
     </dependencies>
 
-    <!-- ============================================================ -->
     <!--  Сборка                                                      -->
-    <!-- ============================================================ -->
     <build>
         <finalName>railway-booking</finalName>
         <plugins>

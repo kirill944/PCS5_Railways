@@ -104,9 +104,7 @@ public class ConsoleMenu {
                 """, PINK, VIOLET));
     }
 
-    // =========================================================
     //  ПОИСК
-    // =========================================================
 
     private void searchMenu() {
         System.out.println(between("""
@@ -140,9 +138,7 @@ public class ConsoleMenu {
         TablePrinter.printBookings(result);
     }
 
-    // =========================================================
     //  ФИЛЬТРАЦИЯ
-    // =========================================================
 
     private void filterMenu() {
         System.out.println(between("""
@@ -178,9 +174,7 @@ public class ConsoleMenu {
         TablePrinter.printBookings(result);
     }
 
-    // =========================================================
     //  СОРТИРОВКА
-    // =========================================================
 
     private void sortMenu() {
         System.out.println(between("""
@@ -211,9 +205,7 @@ public class ConsoleMenu {
         TablePrinter.printBookings(result);
     }
 
-    // =========================================================
     //  СТАТИСТИКА
-    // =========================================================
 
     private void showStatistics() {
         StatisticsService.Statistics stats = statisticsService.collect();
@@ -242,9 +234,7 @@ public class ConsoleMenu {
                 "╚═══════════════════════════════════════════════════╝", PINK, VIOLET));
     }
 
-    // =========================================================
     //  ЭКСПОРТ
-    // =========================================================
 
     private void exportToExcel() {
         String path = "export/bookings.xlsx";
@@ -252,9 +242,7 @@ public class ConsoleMenu {
         System.out.println(between("✔ Экспортировано " + count + " записей в " + path, PINK, VIOLET));
     }
 
-    // =========================================================
     //  ВЫВОД ТАБЛИЦ БД
-    // =========================================================
 
     private void showDatabaseTables() {
         List<Passenger> passengers = passengerService.findAll();

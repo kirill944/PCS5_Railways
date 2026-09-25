@@ -7,7 +7,6 @@ import java.util.Optional;
 
 /**
  * Контракт доступа к данным пассажиров.
- * Реализация может быть JDBC, in-memory, REST — Service не знает деталей.
  */
 public interface PassengerRepository {
 

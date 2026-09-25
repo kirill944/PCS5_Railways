@@ -40,9 +40,7 @@ public class PassengerService {
         this.repository = repository;
     }
 
-    // =========================================================
     //  CREATE
-    // =========================================================
 
     public Passenger create(Passenger passenger) {
         validate(passenger);
@@ -50,9 +48,7 @@ public class PassengerService {
         return repository.save(passenger);
     }
 
-    // =========================================================
     //  UPDATE
-    // =========================================================
 
     public void update(Passenger passenger) {
         if (passenger.getId() == null) {
@@ -66,9 +62,7 @@ public class PassengerService {
         repository.update(passenger);
     }
 
-    // =========================================================
     //  DELETE
-    // =========================================================
 
     public void delete(Long id) {
         if (!repository.existsById(id)) {
@@ -77,9 +71,7 @@ public class PassengerService {
         repository.deleteById(id);
     }
 
-    // =========================================================
     //  READ
-    // =========================================================
 
     public Passenger findById(Long id) {
         return repository.findById(id)
@@ -109,9 +101,7 @@ public class PassengerService {
         return repository.count();
     }
 
-    // =========================================================
     //  Внутренние проверки
-    // =========================================================
 
     private void validate(Passenger p) {
         if (p == null) {

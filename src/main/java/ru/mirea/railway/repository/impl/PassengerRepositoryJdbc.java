@@ -13,7 +13,6 @@ import java.util.Optional;
 
 /**
  * JDBC-реализация PassengerRepository.
- *
  * Все запросы параметризованы (PreparedStatement) — защита от SQL-инъекций.
  * Соединения и ResultSet закрываются через try-with-resources.
  */
@@ -25,9 +24,7 @@ public class PassengerRepositoryJdbc implements PassengerRepository {
         this.db = DatabaseManager.getInstance();
     }
 
-    // =========================================================
     //  CREATE
-    // =========================================================
 
     @Override
     public Passenger save(Passenger passenger) {
@@ -60,9 +57,7 @@ public class PassengerRepositoryJdbc implements PassengerRepository {
         }
     }
 
-    // =========================================================
     //  UPDATE
-    // =========================================================
 
     @Override
     public void update(Passenger passenger) {
@@ -98,9 +93,7 @@ public class PassengerRepositoryJdbc implements PassengerRepository {
         }
     }
 
-    // =========================================================
     //  DELETE
-    // =========================================================
 
     @Override
     public void deleteById(Long id) {
@@ -118,9 +111,7 @@ public class PassengerRepositoryJdbc implements PassengerRepository {
         }
     }
 
-    // =========================================================
     //  READ
-    // =========================================================
 
     @Override
     public Optional<Passenger> findById(Long id) {
@@ -233,9 +224,7 @@ public class PassengerRepositoryJdbc implements PassengerRepository {
         }
     }
 
-    // =========================================================
     //  Внутренние методы
-    // =========================================================
 
     private Optional<Passenger> findSingle(String sql, String param) {
         try (Connection conn = db.getConnection();

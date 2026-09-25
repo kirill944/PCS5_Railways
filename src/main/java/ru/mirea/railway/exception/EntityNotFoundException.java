@@ -3,9 +3,6 @@ package ru.mirea.railway.exception;
 /**
  * Выбрасывается, когда запись по указанному идентификатору
  * не найдена в базе данных.
- *
- * Пример использования:
- *   throw new EntityNotFoundException("Пассажир", id);
  */
 public class EntityNotFoundException extends RuntimeException {
 

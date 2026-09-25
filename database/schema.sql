@@ -1,8 +1,6 @@
--- ============================================================
 --  Railway Booking System — схема базы данных
 --  СУБД: PostgreSQL 14+
 --  Файл: schema.sql
--- ============================================================
 
 -- Удаляем БД, если она уже существует (для чистого пересоздания)
 DROP DATABASE IF EXISTS railway_booking;
@@ -17,10 +15,8 @@ CREATE DATABASE railway_booking
 -- Подключаемся к созданной БД
 \connect railway_booking;
 
--- ============================================================
 --  Таблица: passengers
 --  Хранит информацию о пассажирах
--- ============================================================
 DROP TABLE IF EXISTS bookings CASCADE;
 DROP TABLE IF EXISTS passengers CASCADE;
 
@@ -49,10 +45,8 @@ COMMENT ON TABLE  passengers                 IS 'Пассажиры систем
 COMMENT ON COLUMN passengers.passport_number IS 'Уникальный номер паспорта';
 COMMENT ON COLUMN passengers.email           IS 'Уникальный email пассажира';
 
--- ============================================================
 --  Таблица: bookings
 --  Основная сущность — бронирование билета
--- ============================================================
 CREATE TABLE bookings (
                           id               BIGSERIAL     PRIMARY KEY,
                           passenger_id     BIGINT        NOT NULL,
