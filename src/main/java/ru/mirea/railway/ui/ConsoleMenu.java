@@ -117,21 +117,21 @@ public class ConsoleMenu {
                 4. По номеру паспорта
                 0. Назад
                 """, PINK, VIOLET));
-        Integer choice = InputValidator.readInt(scanner, "Выберите: ");
+        Integer choice = InputValidator.readInt(scanner, between("Выберите: ", PINK, VIOLET));
         if (choice == null) return;
 
         List<Booking> result = switch (choice) {
             case 1 -> bookingService.searchByTrainNumber(
-                    InputValidator.readNonEmptyString(scanner, "Номер поезда: "));
+                    InputValidator.readNonEmptyString(scanner, between("Номер поезда: ", PINK, VIOLET)));
             case 2 -> {
-                String from = InputValidator.readString(scanner, "Откуда (Enter — пропустить): ");
-                String to = InputValidator.readString(scanner, "Куда (Enter — пропустить): ");
+                String from = InputValidator.readString(scanner, between("Откуда (Enter — пропустить): ", PINK, VIOLET));
+                String to = InputValidator.readString(scanner, between("Куда (Enter — пропустить): ", PINK, VIOLET));
                 yield bookingService.searchByRoute(from, to);
             }
             case 3 -> bookingService.searchByPassengerName(
-                    InputValidator.readNonEmptyString(scanner, "Фрагмент ФИО: "));
+                    InputValidator.readNonEmptyString(scanner, between("Фрагмент ФИО: ", PINK, VIOLET)));
             case 4 -> bookingService.searchByPassengerPassport(
-                    InputValidator.readNonEmptyString(scanner, "Номер паспорта: "));
+                    InputValidator.readNonEmptyString(scanner, between("Номер паспорта: ", PINK, VIOLET)));
             default -> {
                 System.out.println(between("Отменено", PINK, VIOLET));
                 yield List.of();
@@ -152,22 +152,22 @@ public class ConsoleMenu {
                 3. По диапазону дат
                 0. Назад
                 """, PINK, VIOLET));
-        Integer choice = InputValidator.readInt(scanner, "Выберите: ");
+        Integer choice = InputValidator.readInt(scanner, between("Выберите: ", PINK, VIOLET));
         if (choice == null) return;
 
         List<Booking> result = switch (choice) {
             case 1 -> {
                 System.out.println(between("Статусы: CREATED, CONFIRMED, PAID, COMPLETED, CANCELLED", PINK, VIOLET));
-                String s = InputValidator.readNonEmptyString(scanner, "Статус: ");
+                String s = InputValidator.readNonEmptyString(scanner, between("Статус: ", PINK, VIOLET));
                 yield bookingService.filterByStatus(BookingStatus.fromString(s));
             }
             case 2 -> {
-                long pid = InputValidator.readLongRequired(scanner, "ID пассажира: ");
+                long pid = InputValidator.readLongRequired(scanner, between("ID пассажира: ", PINK, VIOLET));
                 yield bookingService.filterByPassenger(pid);
             }
             case 3 -> {
-                LocalDate from = InputValidator.readDateRequired(scanner, "Дата от");
-                LocalDate to = InputValidator.readDateRequired(scanner, "Дата до");
+                LocalDate from = InputValidator.readDateRequired(scanner, between("Дата от", PINK, VIOLET));
+                LocalDate to = InputValidator.readDateRequired(scanner, between("Дата до", PINK, VIOLET));
                 yield bookingService.filterByDateRange(from, to);
             }
             default -> {
@@ -193,7 +193,7 @@ public class ConsoleMenu {
                 6. По статусу
                 0. Назад
                 """, PINK, VIOLET));
-        Integer choice = InputValidator.readInt(scanner, "Выберите: ");
+        Integer choice = InputValidator.readInt(scanner, between("Выберите: ", PINK, VIOLET));
         if (choice == null) return;
 
         List<Booking> result = switch (choice) {
