@@ -11,7 +11,9 @@ import ru.mirea.railway.util.InputValidator;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.List;
 
 /**
  * Подменю работы с бронированиями.
@@ -147,16 +149,60 @@ public class BookingMenu {
     private void changeStatus() {
         Long id = InputValidator.readLong(scanner, "ID брони: ");
         if (id == null) return;
-        Booking b = service.findById(id);
-        System.out.println("Текущий статус: " + b.getStatus());
-        System.out.println("Доступные статусы:");
+
+        Booking booking = service.findById(id);
+        BookingStatus current = booking.getStatus();
+
+        System.out.println();
+        System.out.println("Текущий статус: " + current.name()
+                + " (" + current.getDisplayName() + ")");
+
+        // Собираем только доступные переходы
+        List<BookingStatus> available = new ArrayList<>();
         for (BookingStatus s : BookingStatus.values()) {
-            System.out.println("  - " + s.name() + " (" + s.getDisplayName() + ")");
+            if (current.canTransitionTo(s)) {
+                available.add(s);
+            }
         }
-        String input = InputValidator.readNonEmptyString(scanner, "Новый статус: ");
-        BookingStatus newStatus = BookingStatus.fromString(input);
+
+        if (available.isEmpty()) {
+            System.out.println("⚠ Из текущего статуса нет доступных переходов.");
+            System.out.println("  Бронь завершена или отменена — изменить статус нельзя.");
+            return;
+        }
+
+        System.out.println();
+        System.out.println("Доступные переходы:");
+        for (int i = 0; i < available.size(); i++) {
+            BookingStatus s = available.get(i);
+            System.out.printf("  %d. %s (%s)%n", i + 1, s.name(), s.getDisplayName());
+        }
+        System.out.println("  0. Отмена");
+
+        Integer choice = InputValidator.readInt(scanner, "Выберите действие: ");
+        if (choice == null) return;
+
+        if (choice == 0) {
+            System.out.println("Отменено");
+            return;
+        }
+
+        if (choice < 1 || choice > available.size()) {
+            System.out.println("⚠ Неверный выбор. Допустимо: 0–" + available.size());
+            return;
+        }
+
+        BookingStatus newStatus = available.get(choice - 1);
+
+        // Подтверждение
+        if (!InputValidator.confirm(scanner,
+                "Сменить статус с " + current.name() + " на " + newStatus.name() + "?")) {
+            System.out.println("Отменено");
+            return;
+        }
 
         service.changeStatus(id, newStatus);
-        System.out.println("✔ Статус изменён на " + newStatus);
+        System.out.println("✔ Статус изменён: " + current.name()
+                + " → " + newStatus.name());
     }
 }
