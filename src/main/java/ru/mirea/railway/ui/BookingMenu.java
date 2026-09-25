@@ -12,14 +12,18 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.Scanner;
 import java.util.List;
+import java.util.Scanner;
 
 /**
  * Подменю работы с бронированиями.
  * Все поля валидируются немедленно при вводе.
  */
 public class BookingMenu {
+
+    private static final String STATION_REGEX = "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$";
+    private static final String STATION_ERROR =
+            "Неверное название станции. Допускаются буквы, пробелы и дефис (от 3 символов).";
 
     private final Scanner scanner;
     private final BookingService service;
@@ -79,26 +83,25 @@ public class BookingMenu {
 
     private void createBooking() {
         System.out.println("── Создание брони ──");
+
         long passengerId = InputValidator.readLongRequired(scanner, "ID пассажира: ");
 
-        String train = InputValidator.readRegex(scanner, "Номер поезда (напр. 123А): ",
-                "^[0-9]{3}[А-Яа-яA-Za-z]$",
-                "Неверный формат номера поезда. Ожидается 3 цифры и буква, например '123А'.");
+        String train = InputValidator.readRegex(scanner,
+                "Номер поезда (3 цифры + заглавная русская буква, напр. 123А): ",
+                InputValidator.TRAIN_REGEX,
+                InputValidator.TRAIN_ERROR);
 
-        String from = InputValidator.readRegex(scanner, "Станция отправления: ",
-                "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$",
-                "Неверное название станции. Допускаются буквы, пробелы и дефис.");
+        String from = InputValidator.readRegex(scanner,
+                "Станция отправления: ", STATION_REGEX, STATION_ERROR);
 
-        String to = InputValidator.readRegex(scanner, "Станция назначения: ",
-                "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$",
-                "Неверное название станции.");
+        String to = readStationDifferentFrom(from);
 
-        LocalDate date = InputValidator.readDateRequired(scanner, "Дата отправления");
+        LocalDate date = InputValidator.readDepartureDate(scanner, "Дата отправления");
         LocalTime time = InputValidator.readTimeRequired(scanner, "Время отправления");
 
-        int wagon = readPositiveInt("Номер вагона: ");
-        int seat  = readPositiveInt("Номер места: ");
-        BigDecimal price = readPositiveDecimal("Цена билета: ");
+        int wagon = InputValidator.readWagonNumber(scanner, "Номер вагона (1–20): ");
+        int seat  = InputValidator.readSeatNumber(scanner, "Номер места (1–50): ");
+        BigDecimal price = InputValidator.readPrice(scanner, "Цена билета (1000–100000): ");
 
         Booking b = new Booking(passengerId, train, from, to, date, time,
                 wagon, seat, price, BookingStatus.CREATED);
@@ -132,24 +135,22 @@ public class BookingMenu {
 
         long passengerId = InputValidator.readLongRequired(scanner, "ID пассажира: ");
 
-        String train = InputValidator.readRegex(scanner, "Номер поезда (напр. 123А): ",
-                "^[0-9]{3}[А-Яа-яA-Za-z]$",
-                "Неверный формат номера поезда.");
+        String train = InputValidator.readRegex(scanner,
+                "Номер поезда (3 цифры + заглавная русская буква): ",
+                InputValidator.TRAIN_REGEX,
+                InputValidator.TRAIN_ERROR);
 
-        String from = InputValidator.readRegex(scanner, "Станция отправления: ",
-                "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$",
-                "Неверное название станции.");
+        String from = InputValidator.readRegex(scanner,
+                "Станция отправления: ", STATION_REGEX, STATION_ERROR);
 
-        String to = InputValidator.readRegex(scanner, "Станция назначения: ",
-                "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$",
-                "Неверное название станции.");
+        String to = readStationDifferentFrom(from);
 
-        LocalDate date = InputValidator.readDateRequired(scanner, "Дата отправления");
+        LocalDate date = InputValidator.readDepartureDate(scanner, "Дата отправления");
         LocalTime time = InputValidator.readTimeRequired(scanner, "Время отправления");
 
-        int wagon = readPositiveInt("Номер вагона: ");
-        int seat  = readPositiveInt("Номер места: ");
-        BigDecimal price = readPositiveDecimal("Цена: ");
+        int wagon = InputValidator.readWagonNumber(scanner, "Номер вагона (1–20): ");
+        int seat  = InputValidator.readSeatNumber(scanner, "Номер места (1–50): ");
+        BigDecimal price = InputValidator.readPrice(scanner, "Цена (1000–100000): ");
 
         existing.setPassengerId(passengerId);
         existing.setTrainNumber(train);
@@ -167,7 +168,9 @@ public class BookingMenu {
 
     private void deleteBooking() {
         Long id = InputValidator.readLong(scanner, "ID брони для удаления: ");
-        if (id == null) return;
+        if (id == null) {
+            return;
+        }
         service.findById(id);
         if (!InputValidator.confirm(scanner, "Удалить бронь?")) {
             System.out.println("Отменено");
@@ -179,7 +182,9 @@ public class BookingMenu {
 
     private void changeStatus() {
         Long id = InputValidator.readLong(scanner, "ID брони: ");
-        if (id == null) return;
+        if (id == null) {
+            return;
+        }
 
         Booking booking = service.findById(id);
         BookingStatus current = booking.getStatus();
@@ -188,7 +193,6 @@ public class BookingMenu {
         System.out.println("Текущий статус: " + current.name()
                 + " (" + current.getDisplayName() + ")");
 
-        // Собираем только доступные переходы
         List<BookingStatus> available = new ArrayList<>();
         for (BookingStatus s : BookingStatus.values()) {
             if (current.canTransitionTo(s)) {
@@ -211,13 +215,13 @@ public class BookingMenu {
         System.out.println("  0. Отмена");
 
         Integer choice = InputValidator.readInt(scanner, "Выберите действие: ");
-        if (choice == null) return;
-
+        if (choice == null) {
+            return;
+        }
         if (choice == 0) {
             System.out.println("Отменено");
             return;
         }
-
         if (choice < 1 || choice > available.size()) {
             System.out.println("⚠ Неверный выбор. Допустимо: 0–" + available.size());
             return;
@@ -225,7 +229,6 @@ public class BookingMenu {
 
         BookingStatus newStatus = available.get(choice - 1);
 
-        // Подтверждение
         if (!InputValidator.confirm(scanner,
                 "Сменить статус с " + current.name() + " на " + newStatus.name() + "?")) {
             System.out.println("Отменено");
@@ -237,31 +240,20 @@ public class BookingMenu {
                 + " → " + newStatus.name());
     }
 
-    /** Целое ≥ 1. */
-    private int readPositiveInt(String prompt) {
-        String line = InputValidator.readValidated(scanner, prompt, s -> {
-            try {
-                return Integer.parseInt(s) >= 1
-                        ? null
-                        : "Значение должно быть ≥ 1.";
-            } catch (NumberFormatException e) {
-                return "Ожидалось целое число.";
-            }
-        });
-        return Integer.parseInt(line);
-    }
-
-    /** BigDecimal > 0. */
-    private BigDecimal readPositiveDecimal(String prompt) {
-        String line = InputValidator.readValidated(scanner, prompt, s -> {
-            try {
-                return new BigDecimal(s.replace(',', '.')).signum() > 0
-                        ? null
-                        : "Цена должна быть > 0.";
-            } catch (NumberFormatException e) {
-                return "Ожидалось число.";
-            }
-        });
-        return new BigDecimal(line.replace(',', '.'));
+    /** Станция назначения, отличная от станции отправления. */
+    private String readStationDifferentFrom(String from) {
+        return InputValidator.readValidated(scanner,
+                "Станция назначения: ", s -> {
+                    if (s.isEmpty()) {
+                        return "Поле не может быть пустым.";
+                    }
+                    if (!s.matches(STATION_REGEX)) {
+                        return STATION_ERROR;
+                    }
+                    if (s.equalsIgnoreCase(from)) {
+                        return "Станция назначения не может совпадать со станцией отправления.";
+                    }
+                    return null;
+                });
     }
 }

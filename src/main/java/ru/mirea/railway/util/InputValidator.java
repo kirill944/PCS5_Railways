@@ -15,6 +15,13 @@ public final class InputValidator {
     private static final DateTimeFormatter TIME_FMT =
             DateTimeFormatter.ofPattern("HH:mm");
 
+    public static final String TRAIN_REGEX = "^[0-9]{3}[АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ]$";
+
+    public static final String TRAIN_ERROR =
+            "Неверный формат номера поезда. Ожидается ровно 3 цифры и одна "
+                    + "ЗАГЛАВНАЯ русская буква, кроме 'Ь', 'Ъ', 'Ё', 'Ы'. "
+                    + "Например: 123А, 045Б.";
+
     private InputValidator() {}
 
     private static void prompt(String message) {
@@ -112,13 +119,13 @@ public final class InputValidator {
     }
 
     public static LocalDate readDate(Scanner scanner, String prompt) {
-        prompt(prompt + " (формат dd.mm.yyyy): ");
+        prompt(prompt + " (формат dd.MM.yyyy): ");
         String line = scanner.nextLine().trim();
         try {
             return LocalDate.parse(line, DATE_FMT);
         } catch (DateTimeParseException e) {
             System.out.println("⚠ Ошибка: некорректная дата '" + line
-                    + "'. Ожидается dd.mm.yyyy");
+                    + "'. Ожидается dd.MM.yyyy");
             return null;
         }
     }
@@ -173,17 +180,31 @@ public final class InputValidator {
         }
     }
 
+    // =========================================================
+    //  Подтверждение y/n — НЕ выходит из программы при неверном вводе
+    // =========================================================
+
+    /**
+     * Читает подтверждение пользователя. Возвращает true для 'y'/'yes'/'д',
+     * false для 'n'/'no'/'н'. Любой другой ввод — повторяет вопрос.
+     * Никогда не выходит из программы и не бросает исключений.
+     */
     public static boolean confirm(Scanner scanner, String prompt) {
         while (true) {
             prompt(prompt + " (y/n): ");
             String line = scanner.nextLine().trim().toLowerCase();
-            if (line.equals("y") || line.equals("yes") || line.equals("д")) {
+
+            if (line.equals("y") || line.equals("yes") || line.equals("д")
+                    || line.equals("да")) {
                 return true;
             }
-            if (line.equals("n") || line.equals("no") || line.equals("н")) {
+            if (line.equals("n") || line.equals("no") || line.equals("н")
+                    || line.equals("нет")) {
                 return false;
             }
-            System.out.println("⚠ Введите 'y' или 'n'");
+
+            System.out.println("⚠ Неверный ввод: '" + line
+                    + "'. Допустимы только 'y' (да) или 'n' (нет). Попробуйте снова:");
         }
     }
 
@@ -193,5 +214,88 @@ public final class InputValidator {
 
     public static String formatTime(LocalTime time) {
         return time == null ? "—" : time.format(TIME_FMT);
+    }
+
+    // =========================================================
+    //  Специфичные поля с бизнес-ограничениями
+    // =========================================================
+
+    /**
+     * Дата отправления:
+     *   - формат dd.MM.yyyy;
+     *   - не в прошлом;
+     *   - не дальше 1 года вперёд.
+     */
+    public static LocalDate readDepartureDate(Scanner scanner, String prompt) {
+        LocalDate today = LocalDate.now();
+        LocalDate maxDate = today.plusYears(1);
+
+        String line = readValidated(scanner, prompt + " (dd.MM.yyyy): ", s -> {
+            try {
+                LocalDate d = LocalDate.parse(s, DATE_FMT);
+                if (d.isBefore(today)) {
+                    return "Дата отправления не может быть в прошлом.";
+                }
+                if (d.isAfter(maxDate)) {
+                    return "Дата отправления не может быть позже "
+                            + maxDate.format(DATE_FMT) + " (не более 1 года вперёд).";
+                }
+                return null;
+            } catch (Exception e) {
+                return "Неверный формат даты. Ожидается dd.MM.yyyy.";
+            }
+        });
+        return LocalDate.parse(line, DATE_FMT);
+    }
+
+    /** Номер вагона: целое 1–20. */
+    public static int readWagonNumber(Scanner scanner, String prompt) {
+        String line = readValidated(scanner, prompt, s -> {
+            try {
+                int v = Integer.parseInt(s);
+                if (v < 1 || v > 20) {
+                    return "Номер вагона должен быть от 1 до 20.";
+                }
+                return null;
+            } catch (NumberFormatException e) {
+                return "Ожидалось целое число.";
+            }
+        });
+        return Integer.parseInt(line);
+    }
+
+    /** Номер места: целое 1–50. */
+    public static int readSeatNumber(Scanner scanner, String prompt) {
+        String line = readValidated(scanner, prompt, s -> {
+            try {
+                int v = Integer.parseInt(s);
+                if (v < 1 || v > 50) {
+                    return "Номер места должен быть от 1 до 50.";
+                }
+                return null;
+            } catch (NumberFormatException e) {
+                return "Ожидалось целое число.";
+            }
+        });
+        return Integer.parseInt(line);
+    }
+
+    /** Цена билета: от 1000 до 100000 рублей. */
+    public static BigDecimal readPrice(Scanner scanner, String prompt) {
+        String line = readValidated(scanner, prompt, s -> {
+            try {
+                BigDecimal v = new BigDecimal(s.replace(',', '.'));
+                if (v.compareTo(new BigDecimal("1000")) < 0) {
+                    return "Цена не может быть меньше 1000 ₽.";
+                }
+                if (v.compareTo(new BigDecimal("100000")) > 0) {
+                    return "Цена не может быть больше 100 000 ₽.";
+                }
+                return null;
+            } catch (NumberFormatException e) {
+                return "Ожидалось число.";
+            }
+        });
+        return new BigDecimal(line.replace(',', '.'));
     }
 }
