@@ -1,5 +1,8 @@
 package ru.mirea.railway.ui;
 
+import static ru.mirea.railway.util.Ansi.*;
+import static ru.mirea.railway.util.Gradient.*;
+
 import ru.mirea.railway.exception.BusinessException;
 import ru.mirea.railway.exception.DatabaseException;
 import ru.mirea.railway.exception.EntityNotFoundException;
@@ -29,6 +32,9 @@ public class BookingMenu {
         this.service = service;
     }
 
+    private static final int[] PINK = {255, 105, 180};
+    private static final int[] VIOLET = {138, 43, 226};
+
     public void show() {
         while (true) {
             printMenu();
@@ -48,23 +54,23 @@ public class BookingMenu {
                     case 0 -> {
                         return;
                     }
-                    default -> System.out.println("⚠ Неизвестный пункт меню");
+                    default -> System.out.println(color("⚠ Неизвестный пункт меню", YELLOW));
                 }
             } catch (BusinessException e) {
-                System.out.println("✖ Нарушено правило: " + e.getMessage());
+                System.out.println(color("✖ Нарушено правило: " + e.getMessage(), RED));
             } catch (EntityNotFoundException e) {
-                System.out.println("⚠ " + e.getMessage());
+                System.out.println(color("⚠ " + e.getMessage(), YELLOW));
             } catch (DatabaseException e) {
-                System.out.println("✖ Ошибка БД: " + e.getMessage());
+                System.out.println(color("✖ Ошибка БД: " + e.getMessage(), RED));
             } catch (Exception e) {
-                System.out.println("✖ Непредвиденная ошибка: " + e.getMessage());
+                System.out.println(color("✖ Непредвиденная ошибка: " + e.getMessage(), RED));
             }
             System.out.println();
         }
     }
 
     private void printMenu() {
-        System.out.println("""
+        System.out.println(between("""
                 ========== БРОНИРОВАНИЯ ==========
                 1. Создать бронь
                 2. Показать все
@@ -74,11 +80,11 @@ public class BookingMenu {
                 6. Сменить статус
                 0. Назад
                 ==================================
-                """);
+                """, PINK, VIOLET));
     }
 
     private void createBooking() {
-        System.out.println("── Создание брони ──");
+        System.out.println(between("── Создание брони ──", PINK, VIOLET));
         long passengerId = InputValidator.readLongRequired(scanner, "ID пассажира: ");
 
         String train = InputValidator.readRegex(scanner, "Номер поезда (напр. 123А): ",
@@ -104,8 +110,8 @@ public class BookingMenu {
                 wagon, seat, price, BookingStatus.CREATED);
 
         Booking saved = service.create(b);
-        System.out.println("✔ Бронь создана с ID=" + saved.getId()
-                + ", статус: " + saved.getStatus());
+        System.out.println(between("✔ Бронь создана с ID=" + saved.getId()
+                + ", статус: " + saved.getStatus(), PINK, VIOLET));
     }
 
     private void listAll() {
@@ -127,7 +133,7 @@ public class BookingMenu {
         }
         Booking existing = service.findById(id);
 
-        System.out.println("Текущие данные:");
+        System.out.println(between("Текущие данные:", PINK, VIOLET));
         TablePrinter.printSingleBooking(existing);
 
         long passengerId = InputValidator.readLongRequired(scanner, "ID пассажира: ");
@@ -162,7 +168,7 @@ public class BookingMenu {
         existing.setPrice(price);
 
         service.update(existing);
-        System.out.println("✔ Бронь обновлена");
+        System.out.println(between("✔ Бронь обновлена", PINK, VIOLET));
     }
 
     private void deleteBooking() {
@@ -170,11 +176,11 @@ public class BookingMenu {
         if (id == null) return;
         service.findById(id);
         if (!InputValidator.confirm(scanner, "Удалить бронь?")) {
-            System.out.println("Отменено");
+            System.out.println(between("Отменено", PINK, VIOLET));
             return;
         }
         service.delete(id);
-        System.out.println("✔ Бронь удалена");
+        System.out.println(between("✔ Бронь удалена", PINK, VIOLET));
     }
 
     private void changeStatus() {
@@ -185,8 +191,8 @@ public class BookingMenu {
         BookingStatus current = booking.getStatus();
 
         System.out.println();
-        System.out.println("Текущий статус: " + current.name()
-                + " (" + current.getDisplayName() + ")");
+        System.out.println(between("Текущий статус: " + current.name()
+                + " (" + current.getDisplayName() + ")", PINK, VIOLET));
 
         // Собираем только доступные переходы
         List<BookingStatus> available = new ArrayList<>();
@@ -197,29 +203,29 @@ public class BookingMenu {
         }
 
         if (available.isEmpty()) {
-            System.out.println("⚠ Из текущего статуса нет доступных переходов.");
-            System.out.println("  Бронь завершена или отменена — изменить статус нельзя.");
+            System.out.println(color("⚠ Из текущего статуса нет доступных переходов.", YELLOW));
+            System.out.println(color("  Бронь завершена или отменена — изменить статус нельзя.", YELLOW));
             return;
         }
 
         System.out.println();
-        System.out.println("Доступные переходы:");
+        System.out.println(between("Доступные переходы:", PINK, VIOLET));
         for (int i = 0; i < available.size(); i++) {
             BookingStatus s = available.get(i);
-            System.out.printf("  %d. %s (%s)%n", i + 1, s.name(), s.getDisplayName());
+            System.out.println(between(String.format("  %d. %s (%s)", i + 1, s.name(), s.getDisplayName()), PINK, VIOLET));
         }
-        System.out.println("  0. Отмена");
+        System.out.println(between("  0. Отмена", PINK, VIOLET));
 
         Integer choice = InputValidator.readInt(scanner, "Выберите действие: ");
         if (choice == null) return;
 
         if (choice == 0) {
-            System.out.println("Отменено");
+            System.out.println(between("Отменено", PINK, VIOLET));
             return;
         }
 
         if (choice < 1 || choice > available.size()) {
-            System.out.println("⚠ Неверный выбор. Допустимо: 0–" + available.size());
+            System.out.println(color("⚠ Неверный выбор. Допустимо: 0–" + available.size(), YELLOW));
             return;
         }
 
@@ -228,13 +234,13 @@ public class BookingMenu {
         // Подтверждение
         if (!InputValidator.confirm(scanner,
                 "Сменить статус с " + current.name() + " на " + newStatus.name() + "?")) {
-            System.out.println("Отменено");
+            System.out.println(between("Отменено", PINK, VIOLET));
             return;
         }
 
         service.changeStatus(id, newStatus);
-        System.out.println("✔ Статус изменён: " + current.name()
-                + " → " + newStatus.name());
+        System.out.println(between("✔ Статус изменён: " + current.name()
+                + " → " + newStatus.name(), PINK, VIOLET));
     }
 
     /** Целое ≥ 1. */

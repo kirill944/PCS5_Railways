@@ -1,5 +1,8 @@
 package ru.mirea.railway.util;
 
+import static ru.mirea.railway.util.Ansi.*;
+import static ru.mirea.railway.util.Gradient.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -15,10 +18,21 @@ public final class InputValidator {
     private static final DateTimeFormatter TIME_FMT =
             DateTimeFormatter.ofPattern("HH:mm");
 
+    private static final int[] PINK = {255, 105, 180};
+    private static final int[] VIOLET = {138, 43, 226};
+
     private InputValidator() {}
 
+    /**
+     * Печатает приглашение к вводу.
+     * Если строка уже содержит ANSI-коды (окрашена вызывающим) — оставляем как есть,
+     * иначе красим градиентом PINK→VIOLET.
+     */
     private static void prompt(String message) {
-        System.out.print(message);
+        String out = message.contains("\u001B[")
+                ? message
+                : between(message, PINK, VIOLET);
+        System.out.print(out);
         System.out.flush();
     }
 
@@ -36,7 +50,7 @@ public final class InputValidator {
             if (error == null) {
                 return line;
             }
-            System.out.println("⚠ " + error + " Введите ещё раз:");
+            System.out.println(color("⚠ " + error + " Введите ещё раз:", YELLOW));
         }
     }
 
@@ -61,7 +75,8 @@ public final class InputValidator {
         try {
             return Integer.parseInt(line);
         } catch (NumberFormatException e) {
-            System.out.println("⚠ Ошибка: ожидалось целое число, получено: '" + line + "'");
+            System.out.println(color(
+                    "⚠ Ошибка: ожидалось целое число, получено: '" + line + "'", YELLOW));
             return null;
         }
     }
@@ -81,7 +96,8 @@ public final class InputValidator {
         try {
             return Long.parseLong(line);
         } catch (NumberFormatException e) {
-            System.out.println("⚠ Ошибка: ожидалось целое число, получено: '" + line + "'");
+            System.out.println(color(
+                    "⚠ Ошибка: ожидалось целое число, получено: '" + line + "'", YELLOW));
             return null;
         }
     }
@@ -102,7 +118,7 @@ public final class InputValidator {
             if (!line.isEmpty()) {
                 return line;
             }
-            System.out.println("⚠ Ошибка: строка не может быть пустой");
+            System.out.println(color("⚠ Ошибка: строка не может быть пустой", YELLOW));
         }
     }
 
@@ -117,8 +133,9 @@ public final class InputValidator {
         try {
             return LocalDate.parse(line, DATE_FMT);
         } catch (DateTimeParseException e) {
-            System.out.println("⚠ Ошибка: некорректная дата '" + line
-                    + "'. Ожидается dd.mm.yyyy");
+            System.out.println(color(
+                    "⚠ Ошибка: некорректная дата '" + line
+                            + "'. Ожидается dd.mm.yyyy", YELLOW));
             return null;
         }
     }
@@ -138,8 +155,9 @@ public final class InputValidator {
         try {
             return LocalTime.parse(line, TIME_FMT);
         } catch (DateTimeParseException e) {
-            System.out.println("⚠ Ошибка: некорректное время '" + line
-                    + "'. Ожидается HH:mm");
+            System.out.println(color(
+                    "⚠ Ошибка: некорректное время '" + line
+                            + "'. Ожидается HH:mm", YELLOW));
             return null;
         }
     }
@@ -159,7 +177,8 @@ public final class InputValidator {
         try {
             return new BigDecimal(line);
         } catch (NumberFormatException e) {
-            System.out.println("⚠ Ошибка: ожидалось число, получено: '" + line + "'");
+            System.out.println(color(
+                    "⚠ Ошибка: ожидалось число, получено: '" + line + "'", YELLOW));
             return null;
         }
     }
@@ -183,7 +202,7 @@ public final class InputValidator {
             if (line.equals("n") || line.equals("no") || line.equals("н")) {
                 return false;
             }
-            System.out.println("⚠ Введите 'y' или 'n'");
+            System.out.println(color("⚠ Введите 'y' или 'n'", YELLOW));
         }
     }
 

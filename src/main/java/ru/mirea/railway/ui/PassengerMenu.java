@@ -1,5 +1,8 @@
 package ru.mirea.railway.ui;
 
+import static ru.mirea.railway.util.Ansi.*;
+import static ru.mirea.railway.util.Gradient.*;
+
 import ru.mirea.railway.exception.BusinessException;
 import ru.mirea.railway.exception.DatabaseException;
 import ru.mirea.railway.exception.EntityNotFoundException;
@@ -41,6 +44,9 @@ public class PassengerMenu {
         this.service = service;
     }
 
+    private static final int[] PINK = {255, 105, 180};
+    private static final int[] VIOLET = {138, 43, 226};
+
     public void show() {
         while (true) {
             printMenu();
@@ -60,23 +66,23 @@ public class PassengerMenu {
                     case 0 -> {
                         return;
                     }
-                    default -> System.out.println("⚠ Неизвестный пункт меню");
+                    default -> System.out.println(color("⚠ Неизвестный пункт меню", YELLOW));
                 }
             } catch (BusinessException e) {
-                System.out.println("✖ Нарушено правило: " + e.getMessage());
+                System.out.println(color("✖ Нарушено правило: " + e.getMessage(), RED));
             } catch (EntityNotFoundException e) {
-                System.out.println("⚠ " + e.getMessage());
+                System.out.println(color("⚠ " + e.getMessage(), YELLOW));
             } catch (DatabaseException e) {
-                System.out.println("✖ Ошибка БД: " + e.getMessage());
+                System.out.println(color("✖ Ошибка БД: " + e.getMessage(), RED));
             } catch (Exception e) {
-                System.out.println("✖ Непредвиденная ошибка: " + e.getMessage());
+                System.out.println(color("✖ Непредвиденная ошибка: " + e.getMessage(), RED));
             }
             System.out.println();
         }
     }
 
     private void printMenu() {
-        System.out.println("""
+        System.out.println(between("""
                 ============ ПАССАЖИРЫ ============
                 1. Добавить пассажира
                 2. Показать всех
@@ -86,11 +92,11 @@ public class PassengerMenu {
                 6. Поиск по ФИО
                 0. Назад
                 ===================================
-                """);
+                """, PINK, VIOLET));
     }
 
     private void createPassenger() {
-        System.out.println("── Создание пассажира ──");
+        System.out.println(between("── Создание пассажира ──", PINK, VIOLET));
 
         String fullName = InputValidator.readRegex(scanner, "ФИО: ",
                 "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$",
@@ -111,7 +117,7 @@ public class PassengerMenu {
 
         Passenger p = new Passenger(fullName, passport, email, phone, birth);
         Passenger saved = service.create(p);
-        System.out.println("✔ Пассажир создан с ID=" + saved.getId());
+        System.out.println(between("✔ Пассажир создан с ID=" + saved.getId(), PINK, VIOLET));
     }
 
     private void listAll() {
@@ -135,7 +141,7 @@ public class PassengerMenu {
         }
         Passenger existing = service.findById(id);
 
-        System.out.println("Текущее ФИО: " + existing.getFullName());
+        System.out.println(between("Текущее ФИО: " + existing.getFullName(), PINK, VIOLET));
 
         String fullName = InputValidator.readRegex(scanner, "Новое ФИО: ",
                 "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$",
@@ -161,7 +167,7 @@ public class PassengerMenu {
         existing.setBirthDate(birth);
 
         service.update(existing);
-        System.out.println("✔ Пассажир обновлён");
+        System.out.println(between("✔ Пассажир обновлён", PINK, VIOLET));
     }
 
     private void deletePassenger() {
@@ -172,11 +178,11 @@ public class PassengerMenu {
         service.findById(id);
 
         if (!InputValidator.confirm(scanner, "Удалить пассажира и все его брони?")) {
-            System.out.println("Отменено");
+            System.out.println(between("Отменено", PINK, VIOLET));
             return;
         }
         service.delete(id);
-        System.out.println("✔ Пассажир удалён");
+        System.out.println(between("✔ Пассажир удалён", PINK, VIOLET));
     }
 
     private void searchByName() {
