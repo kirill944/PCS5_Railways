@@ -10,7 +10,9 @@ import ru.mirea.railway.repository.BookingRepository;
 import ru.mirea.railway.repository.PassengerRepository;
 import ru.mirea.railway.repository.impl.BookingRepositoryJdbc;
 import ru.mirea.railway.repository.impl.PassengerRepositoryJdbc;
+import ru.mirea.railway.util.InputValidator;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -18,11 +20,28 @@ import java.util.stream.Collectors;
 
 /**
  * Бизнес-логика работы с бронированиями.
+ *
+ * Правила:
+ *   - номер поезда: 3 цифры + заглавная русская буква (без Ь, Ъ, Ё, Ы);
+ *   - станции не совпадают;
+ *   - дата отправления: не в прошлом и не позже года вперёд;
+ *   - вагон: 1–20;
+ *   - место: 1–50;
+ *   - цена: 1000–100 000 ₽;
+ *   - место на поезд/вагон/дату уникально (кроме CANCELLED).
  */
 public class BookingService {
 
     private static final int[] PINK   = {255, 105, 180};
     private static final int[] VIOLET = {138, 43, 226};
+
+    private static final int MAX_WAGON = 20;
+    private static final int MAX_SEAT  = 50;
+
+    private static final BigDecimal MIN_PRICE = new BigDecimal("1000");
+    private static final BigDecimal MAX_PRICE = new BigDecimal("100000");
+
+    private static final int MAX_DAYS_AHEAD = 365;
 
     private final BookingRepository bookingRepository;
     private final PassengerRepository passengerRepository;
@@ -119,6 +138,18 @@ public class BookingService {
 
     public List<Booking> findAll() {
         return bookingRepository.findAll();
+    }
+
+    /**
+     * Публичная проверка занятости места — используется UI
+     * для НЕМЕДЛЕННОЙ валидации при вводе вагона/места.
+     */
+    public boolean isSeatTaken(String trainNumber, int wagonNumber,
+                               int seatNumber, LocalDate departureDate) {
+        if (trainNumber == null || trainNumber.isBlank() || departureDate == null) {
+            return false;
+        }
+        return bookingRepository.isSeatTaken(trainNumber, wagonNumber, seatNumber, departureDate);
     }
 
     // =========================================================
@@ -237,10 +268,10 @@ public class BookingService {
         }
 
         if (b.getTrainNumber() == null
-                || !b.getTrainNumber().matches("^[0-9]{3}[А-Яа-яA-Za-z]$")) {
+                || !b.getTrainNumber().matches(InputValidator.TRAIN_REGEX)) {
             throw new BusinessException(between(
                     "Неверный номер поезда: " + b.getTrainNumber()
-                            + " (ожидается 3 цифры и буква, например '123А')", PINK, VIOLET));
+                            + ". " + InputValidator.TRAIN_ERROR, PINK, VIOLET));
         }
 
         if (b.getRouteFrom() == null || b.getRouteFrom().isBlank()) {
@@ -257,20 +288,36 @@ public class BookingService {
         if (b.getDepartureDate() == null || b.getDepartureTime() == null) {
             throw new BusinessException(between("Дата и время отправления обязательны", PINK, VIOLET));
         }
-        if (b.getDepartureDate().isBefore(LocalDate.now())) {
+
+        LocalDate today = LocalDate.now();
+        LocalDate maxDate = today.plusDays(MAX_DAYS_AHEAD);
+
+        if (b.getDepartureDate().isBefore(today)) {
             throw new BusinessException(between(
                     "Дата отправления не может быть в прошлом: " + b.getDepartureDate(), PINK, VIOLET));
         }
-
-        if (b.getWagonNumber() < 1) {
-            throw new BusinessException(between("Номер вагона должен быть >= 1", PINK, VIOLET));
-        }
-        if (b.getSeatNumber() < 1) {
-            throw new BusinessException(between("Номер места должен быть >= 1", PINK, VIOLET));
+        if (b.getDepartureDate().isAfter(maxDate)) {
+            throw new BusinessException(between(
+                    "Дата отправления не может быть позже " + maxDate
+                            + " (не более 1 года вперёд)", PINK, VIOLET));
         }
 
-        if (b.getPrice() == null || b.getPrice().signum() <= 0) {
-            throw new BusinessException(between("Цена билета должна быть > 0", PINK, VIOLET));
+        if (b.getWagonNumber() < 1 || b.getWagonNumber() > MAX_WAGON) {
+            throw new BusinessException(between(
+                    "Номер вагона должен быть от 1 до " + MAX_WAGON, PINK, VIOLET));
+        }
+        if (b.getSeatNumber() < 1 || b.getSeatNumber() > MAX_SEAT) {
+            throw new BusinessException(between(
+                    "Номер места должен быть от 1 до " + MAX_SEAT, PINK, VIOLET));
+        }
+
+        if (b.getPrice() == null || b.getPrice().compareTo(MIN_PRICE) < 0) {
+            throw new BusinessException(between(
+                    "Цена билета не может быть меньше " + MIN_PRICE + " ₽", PINK, VIOLET));
+        }
+        if (b.getPrice().compareTo(MAX_PRICE) > 0) {
+            throw new BusinessException(between(
+                    "Цена билета не может быть больше " + MAX_PRICE + " ₽", PINK, VIOLET));
         }
     }
 

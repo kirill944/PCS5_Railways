@@ -12,12 +12,15 @@ import ru.mirea.railway.util.InputValidator;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.ResolverStyle;
 import java.util.List;
 import java.util.Scanner;
 
 /**
  * Подменю работы с пассажирами.
- * Все поля валидируются немедленно при вводе.
+ * Все поля валидируются немедленно при вводе:
+ *   - формат полей (regex);
+ *   - уникальность паспорта и email — сразу при вводе (БД).
  *
  * Телефон: строго +7XXXXXXXXXX.
  * Дата рождения: в прошлом и не более 150 лет назад.
@@ -25,16 +28,33 @@ import java.util.Scanner;
 public class PassengerMenu {
 
     private static final DateTimeFormatter DATE_FMT =
-            DateTimeFormatter.ofPattern("dd.mm.yyyy");
+            DateTimeFormatter.ofPattern("dd.MM.uuuu")
+                    .withResolverStyle(ResolverStyle.STRICT);
 
-    /** Телефон: строго +7 и ровно 10 цифр. */
+    private static final String DATE_HINT = "dd.MM.yyyy";
+
+    private static final String FULL_NAME_REGEX = "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$";
+    private static final String FULL_NAME_ERROR =
+            "Неверный формат ФИО. Допускаются буквы, пробелы и дефис (от 3 символов).";
+
+    private static final String PASSPORT_REGEX = "^\\d{4}\\s\\d{6}$";
+    private static final String PASSPORT_ERROR =
+            "Неверный ввод паспорта. Ожидается формат: серия (4 цифры) номер (6 цифр), "
+                    + "например: 1234 123456.";
+
+    private static final String EMAIL_REGEX = "^[\\w.+-]+@[\\w-]+\\.[\\w.-]+$";
+    private static final String EMAIL_ERROR =
+            "Неверный ввод email. Ожидается формат 'name@domain.ru'.";
+
     private static final String PHONE_REGEX = "^\\+7\\d{10}$";
     private static final String PHONE_ERROR =
             "Неверный ввод телефона. Ожидается российский номер в формате '+7XXXXXXXXXX' "
                     + "(знак '+', цифра 7 и ровно 10 цифр).";
 
-    /** Максимальный возраст пассажира. */
     private static final int MAX_AGE = 150;
+
+    private static final int[] PINK = {255, 105, 180};
+    private static final int[] VIOLET = {138, 43, 226};
 
     private final Scanner scanner;
     private final PassengerService service;
@@ -43,9 +63,6 @@ public class PassengerMenu {
         this.scanner = scanner;
         this.service = service;
     }
-
-    private static final int[] PINK = {255, 105, 180};
-    private static final int[] VIOLET = {138, 43, 226};
 
     public void show() {
         while (true) {
@@ -98,19 +115,19 @@ public class PassengerMenu {
     private void createPassenger() {
         System.out.println(between("── Создание пассажира ──", PINK, VIOLET));
 
-        String fullName = InputValidator.readRegex(scanner, between("ФИО: ", PINK, VIOLET),
-                "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$",
-                "Неверный формат ФИО. Допускаются буквы, пробелы и дефис (от 3 символов).");
+        String fullName = InputValidator.readRegex(scanner,
+                between("ФИО: ", PINK, VIOLET),
+                FULL_NAME_REGEX, FULL_NAME_ERROR);
 
-        String passport = InputValidator.readRegex(scanner, between("Серия и номер паспорта: ", PINK, VIOLET),
-                "^\\d{4}\\s\\d{6}$",
-                "Неверный ввод паспорта. Ожидается формат: серия (4 цифры) номер (6 цифр), например: 1234 123456.");
+        // Паспорт — сразу проверяем уникальность
+        String passport = readUniquePassport(between("Серия и номер паспорта: ", PINK, VIOLET),
+                null);
 
-        String email = InputValidator.readRegex(scanner, between("Email: ", PINK, VIOLET),
-                "^[\\w.+-]+@[\\w-]+\\.[\\w.-]+$",
-                "Неверный ввод email. Ожидается формат 'name@domain.ru'.");
+        // Email — сразу проверяем уникальность
+        String email = readUniqueEmail(between("Email: ", PINK, VIOLET), null);
 
-        String phone = InputValidator.readRegex(scanner, between("Телефон (+7XXXXXXXXXX): ", PINK, VIOLET),
+        String phone = InputValidator.readRegex(scanner,
+                between("Телефон (+7XXXXXXXXXX): ", PINK, VIOLET),
                 PHONE_REGEX, PHONE_ERROR);
 
         LocalDate birth = readBirthDate();
@@ -135,7 +152,8 @@ public class PassengerMenu {
     }
 
     private void updatePassenger() {
-        Long id = InputValidator.readLong(scanner, between("ID пассажира для редактирования: ", PINK, VIOLET));
+        Long id = InputValidator.readLong(scanner,
+                between("ID пассажира для редактирования: ", PINK, VIOLET));
         if (id == null) {
             return;
         }
@@ -143,19 +161,21 @@ public class PassengerMenu {
 
         System.out.println(between("Текущее ФИО: " + existing.getFullName(), PINK, VIOLET));
 
-        String fullName = InputValidator.readRegex(scanner, between("Новое ФИО: ", PINK, VIOLET),
-                "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$",
-                "Неверный формат ФИО.");
+        String fullName = InputValidator.readRegex(scanner,
+                between("Новое ФИО: ", PINK, VIOLET),
+                FULL_NAME_REGEX, FULL_NAME_ERROR);
 
-        String passport = InputValidator.readRegex(scanner, between("Новый паспорт (серия (4 цифры) номер (6 цифр)): ", PINK, VIOLET),
-                "^\\d{4}\\s\\d{6}$",
-                "Неверный ввод паспорта. Ожидается формат: серия (4 цифры) номер (6 цифр), например: 1234 123456.");
+        // excludeId = id — чтобы не конфликтовать с самим собой
+        String passport = readUniquePassport(
+                between("Новый паспорт (серия 4 цифры + номер 6 цифр): ", PINK, VIOLET),
+                id);
 
-        String email = InputValidator.readRegex(scanner, between("Новый email: ", PINK, VIOLET),
-                "^[\\w.+-]+@[\\w-]+\\.[\\w.-]+$",
-                "Неверный ввод email.");
+        String email = readUniqueEmail(
+                between("Новый email: ", PINK, VIOLET),
+                id);
 
-        String phone = InputValidator.readRegex(scanner, between("Новый телефон (+7XXXXXXXXXX): ", PINK, VIOLET),
+        String phone = InputValidator.readRegex(scanner,
+                between("Новый телефон (+7XXXXXXXXXX): ", PINK, VIOLET),
                 PHONE_REGEX, PHONE_ERROR);
 
         LocalDate birth = readBirthDate();
@@ -171,7 +191,8 @@ public class PassengerMenu {
     }
 
     private void deletePassenger() {
-        Long id = InputValidator.readLong(scanner, between("ID пассажира для удаления: ", PINK, VIOLET));
+        Long id = InputValidator.readLong(scanner,
+                between("ID пассажира для удаления: ", PINK, VIOLET));
         if (id == null) {
             return;
         }
@@ -187,35 +208,85 @@ public class PassengerMenu {
     }
 
     private void searchByName() {
-        String fragment = InputValidator.readNonEmptyString(scanner, between("Фрагмент ФИО: ", PINK, VIOLET));
+        String fragment = InputValidator.readNonEmptyString(scanner,
+                between("Фрагмент ФИО: ", PINK, VIOLET));
         List<Passenger> found = service.searchByFullName(fragment);
         TablePrinter.printPassengers(found);
     }
 
+    // =========================================================
+    //  Немедленные проверки уникальности через БД
+    // =========================================================
+
     /**
-     * Дата рождения:
-     *   - формат dd.MM.yyyy;
-     *   - строго в прошлом;
-     *   - возраст не более 150 лет.
+     * Читает паспорт, сразу проверяя формат и уникальность.
+     * excludeId — id текущего пассажира при редактировании
+     * (чтобы не конфликтовать с самим собой).
      */
+    private String readUniquePassport(String prompt, Long excludeId) {
+        return InputValidator.readValidated(scanner, prompt, s -> {
+            if (s.isEmpty()) {
+                return "Поле не может быть пустым.";
+            }
+            if (!s.matches(PASSPORT_REGEX)) {
+                return PASSPORT_ERROR;
+            }
+            // Идём в БД и проверяем занятость паспорта
+            try {
+                var existing = service.findByPassport(s);
+                if (existing.isPresent()
+                        && !existing.get().getId().equals(excludeId)) {
+                    return "Пассажир с паспортом '" + s + "' уже существует в базе.";
+                }
+            } catch (DatabaseException e) {
+                return "Не удалось проверить паспорт в БД: " + e.getMessage();
+            }
+            return null;
+        });
+    }
+
+    /** Читает email, сразу проверяя формат и уникальность. */
+    private String readUniqueEmail(String prompt, Long excludeId) {
+        return InputValidator.readValidated(scanner, prompt, s -> {
+            if (s.isEmpty()) {
+                return "Поле не может быть пустым.";
+            }
+            if (!s.matches(EMAIL_REGEX)) {
+                return EMAIL_ERROR;
+            }
+            try {
+                var existing = service.findByEmail(s);
+                if (existing.isPresent()
+                        && !existing.get().getId().equals(excludeId)) {
+                    return "Пассажир с email '" + s + "' уже существует в базе.";
+                }
+            } catch (DatabaseException e) {
+                return "Не удалось проверить email в БД: " + e.getMessage();
+            }
+            return null;
+        });
+    }
+
+    /** Дата рождения: формат dd.MM.yyyy + в прошлом + не старше 150 лет. */
     private LocalDate readBirthDate() {
-        LocalDate minDate = LocalDate.now().minusYears(MAX_AGE);
+        LocalDate today = LocalDate.now();
+        LocalDate minDate = today.minusYears(MAX_AGE);
 
         String line = InputValidator.readValidated(scanner,
-                between("Дата рождения (dd.mm.yyyy): ", PINK, VIOLET), s -> {
+                between("Дата рождения (" + DATE_HINT + "): ", PINK, VIOLET), s -> {
                     try {
                         LocalDate d = LocalDate.parse(s, DATE_FMT);
-
-                        if (!d.isBefore(LocalDate.now())) {
+                        if (!d.isBefore(today)) {
                             return "Дата рождения должна быть в прошлом.";
                         }
                         if (d.isBefore(minDate)) {
                             return "Возраст не может превышать " + MAX_AGE
-                                    + " лет (дата не раньше " + minDate.format(DATE_FMT) + ").";
+                                    + " лет (дата не раньше "
+                                    + minDate.format(DATE_FMT) + ").";
                         }
                         return null;
                     } catch (Exception e) {
-                        return "Неверный формат даты. Ожидается dd.mm.yyyy.";
+                        return "Неверный формат даты. Ожидается " + DATE_HINT + ".";
                     }
                 });
         return LocalDate.parse(line, DATE_FMT);
