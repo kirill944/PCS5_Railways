@@ -9,7 +9,6 @@ import ru.mirea.railway.repository.PassengerRepository;
 import ru.mirea.railway.repository.impl.BookingRepositoryJdbc;
 import ru.mirea.railway.repository.impl.PassengerRepositoryJdbc;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -17,14 +16,6 @@ import java.util.stream.Collectors;
 
 /**
  * Бизнес-логика работы с бронированиями.
- *
- * Бизнес-правила:
- *   BR-1. Нельзя создать бронь без существующего пассажира.
- *   BR-2. Нельзя занять уже занятое место (поезд + вагон + место + дата).
- *   BR-3. Номер вагона и места >= 1.
- *   BR-4. Дата отправления не может быть в прошлом.
- *   BR-5. Цена билета > 0.
- *   BR-6. Запрещённые переходы статусов (см. BookingStatus.canTransitionTo).
  */
 public class BookingService {
 
@@ -49,12 +40,10 @@ public class BookingService {
     public Booking create(Booking booking) {
         validateCommon(booking);
 
-        // BR-1: пассажир должен существовать
         if (!passengerRepository.existsById(booking.getPassengerId())) {
             throw new EntityNotFoundException("Пассажир", booking.getPassengerId());
         }
 
-        // BR-2: место не должно быть занято
         if (bookingRepository.isSeatTaken(
                 booking.getTrainNumber(),
                 booking.getWagonNumber(),
@@ -66,9 +55,7 @@ public class BookingService {
                     booking.getTrainNumber(), booking.getDepartureDate()));
         }
 
-        // Новая бронь всегда создаётся в статусе CREATED
         booking.setStatus(BookingStatus.CREATED);
-
         return bookingRepository.save(booking);
     }
 
@@ -88,7 +75,6 @@ public class BookingService {
             throw new EntityNotFoundException("Пассажир", booking.getPassengerId());
         }
 
-        // Проверка занятости места — только если место/поезд/дата изменились
         boolean seatChanged =
                 !existing.getTrainNumber().equals(booking.getTrainNumber())
                         || existing.getWagonNumber() != booking.getWagonNumber()
@@ -131,7 +117,7 @@ public class BookingService {
     }
 
     // =========================================================
-    //  СМЕНА СТАТУСА (BR-6)
+    //  СМЕНА СТАТУСА
     // =========================================================
 
     public void changeStatus(Long bookingId, BookingStatus newStatus) {
@@ -201,19 +187,23 @@ public class BookingService {
     }
 
     // =========================================================
-    //  СОРТИРОВКА (Java Stream API + Comparator)
+    //  СОРТИРОВКА
     // =========================================================
 
     public List<Booking> sortByDepartureDate(boolean ascending) {
         Comparator<Booking> cmp = Comparator.comparing(Booking::getDepartureDate)
                 .thenComparing(Booking::getDepartureTime);
-        if (!ascending) cmp = cmp.reversed();
+        if (!ascending) {
+            cmp = cmp.reversed();
+        }
         return findAll().stream().sorted(cmp).collect(Collectors.toList());
     }
 
     public List<Booking> sortByPrice(boolean ascending) {
         Comparator<Booking> cmp = Comparator.comparing(Booking::getPrice);
-        if (!ascending) cmp = cmp.reversed();
+        if (!ascending) {
+            cmp = cmp.reversed();
+        }
         return findAll().stream().sorted(cmp).collect(Collectors.toList());
     }
 
@@ -230,7 +220,7 @@ public class BookingService {
     }
 
     // =========================================================
-    //  Внутренние проверки (BR-3, BR-4, BR-5)
+    //  Внутренние проверки
     // =========================================================
 
     private void validateCommon(Booking b) {
@@ -240,25 +230,33 @@ public class BookingService {
         if (b.getPassengerId() == null) {
             throw new BusinessException("Не указан пассажир");
         }
-        requireNonBlank(b.getTrainNumber(), "Номер поезда");
-        requireNonBlank(b.getRouteFrom(), "Станция отправления");
-        requireNonBlank(b.getRouteTo(), "Станция назначения");
 
+        if (b.getTrainNumber() == null
+                || !b.getTrainNumber().matches("^[0-9]{3}[А-Яа-яA-Za-z]$")) {
+            throw new BusinessException(
+                    "Неверный номер поезда: " + b.getTrainNumber()
+                            + " (ожидается 3 цифры и буква, например '123А')");
+        }
+
+        if (b.getRouteFrom() == null || b.getRouteFrom().isBlank()) {
+            throw new BusinessException("Станция отправления обязательна");
+        }
+        if (b.getRouteTo() == null || b.getRouteTo().isBlank()) {
+            throw new BusinessException("Станция назначения обязательна");
+        }
         if (b.getRouteFrom().equalsIgnoreCase(b.getRouteTo())) {
             throw new BusinessException(
                     "Станция отправления и назначения не могут совпадать");
         }
+
         if (b.getDepartureDate() == null || b.getDepartureTime() == null) {
             throw new BusinessException("Дата и время отправления обязательны");
         }
-
-        // BR-4
         if (b.getDepartureDate().isBefore(LocalDate.now())) {
             throw new BusinessException(
                     "Дата отправления не может быть в прошлом: " + b.getDepartureDate());
         }
 
-        // BR-3
         if (b.getWagonNumber() < 1) {
             throw new BusinessException("Номер вагона должен быть >= 1");
         }
@@ -266,8 +264,7 @@ public class BookingService {
             throw new BusinessException("Номер места должен быть >= 1");
         }
 
-        // BR-5
-        if (b.getPrice() == null || b.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+        if (b.getPrice() == null || b.getPrice().signum() <= 0) {
             throw new BusinessException("Цена билета должна быть > 0");
         }
     }

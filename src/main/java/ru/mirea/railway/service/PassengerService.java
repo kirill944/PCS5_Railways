@@ -14,13 +14,16 @@ import java.util.Optional;
  * Бизнес-логика работы с пассажирами.
  *
  * Правила:
- *   1. ФИО, паспорт, email, телефон, дата рождения обязательны.
- *   2. Email уникален и должен содержать '@'.
- *   3. Номер паспорта уникален.
- *   4. Телефон — только цифры, '+' и длина 10–15.
- *   5. Дата рождения в прошлом.
+ *   - телефон строго +7XXXXXXXXXX;
+ *   - дата рождения в прошлом, возраст не более 150 лет.
  */
 public class PassengerService {
+
+    /** Телефон: строго +7 и ровно 10 цифр. */
+    private static final String PHONE_REGEX = "^\\+7\\d{10}$";
+
+    /** Максимальный возраст пассажира. */
+    private static final int MAX_AGE = 150;
 
     private final PassengerRepository repository;
 
@@ -28,7 +31,6 @@ public class PassengerService {
         this.repository = new PassengerRepositoryJdbc();
     }
 
-    // Для юнит-тестов и подмены реализации
     public PassengerService(PassengerRepository repository) {
         this.repository = repository;
     }
@@ -103,39 +105,54 @@ public class PassengerService {
     }
 
     // =========================================================
-    //  Внутренние проверки (бизнес-правила)
+    //  Внутренние проверки
     // =========================================================
 
     private void validate(Passenger p) {
         if (p == null) {
             throw new BusinessException("Пассажир не может быть null");
         }
-        requireNonBlank(p.getFullName(), "ФИО");
-        requireNonBlank(p.getPassportNumber(), "Номер паспорта");
-        requireNonBlank(p.getEmail(), "Email");
-        requireNonBlank(p.getPhone(), "Телефон");
 
-        if (p.getFullName().length() < 3) {
-            throw new BusinessException("ФИО должно содержать минимум 3 символа");
+        if (p.getFullName() == null
+                || !p.getFullName().matches("^[А-Яа-яЁёA-Za-z\\s-]{3,150}$")) {
+            throw new BusinessException(
+                    "Неверный формат ФИО: " + p.getFullName()
+                            + " (допускаются буквы, пробелы и дефис, от 3 символов)");
         }
-        if (!p.getEmail().contains("@") || !p.getEmail().contains(".")) {
+
+        if (p.getPassportNumber() == null
+                || !p.getPassportNumber().matches("^\\d{4}\\s\\d{6}$")) {
+            throw new BusinessException(
+                    "Неверный формат паспорта: " + p.getPassportNumber()
+                            + " (Ожидается формат: серия (4 цифры) номер (6 цифр), например: 1234 123456");
+        }
+
+        if (p.getEmail() == null
+                || !p.getEmail().matches("^[\\w.+-]+@[\\w-]+\\.[\\w.-]+$")) {
             throw new BusinessException("Некорректный email: " + p.getEmail());
         }
-        if (!p.getPhone().matches("^\\+?[0-9]{10,15}$")) {
+
+        if (p.getPhone() == null || !p.getPhone().matches(PHONE_REGEX)) {
             throw new BusinessException(
                     "Некорректный телефон: " + p.getPhone()
-                            + " (ожидается 10–15 цифр, возможно с '+')");
+                            + " (ожидается российский номер в формате '+7XXXXXXXXXX')");
         }
+
         if (p.getBirthDate() == null) {
             throw new BusinessException("Дата рождения обязательна");
         }
-        if (!p.getBirthDate().isBefore(LocalDate.now())) {
+
+        LocalDate today = LocalDate.now();
+        LocalDate minDate = today.minusYears(MAX_AGE);
+
+        if (!p.getBirthDate().isBefore(today)) {
             throw new BusinessException(
                     "Дата рождения должна быть в прошлом: " + p.getBirthDate());
         }
-        if (p.getPassportNumber().length() < 5) {
+        if (p.getBirthDate().isBefore(minDate)) {
             throw new BusinessException(
-                    "Номер паспорта слишком короткий: " + p.getPassportNumber());
+                    "Возраст не может превышать " + MAX_AGE
+                            + " лет (дата рождения не раньше " + minDate + ")");
         }
     }
 
@@ -153,11 +170,5 @@ public class PassengerService {
                         "Пассажир с паспортом '" + p.getPassportNumber() + "' уже существует");
             }
         });
-    }
-
-    private void requireNonBlank(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new BusinessException("Поле '" + fieldName + "' обязательно");
-        }
     }
 }

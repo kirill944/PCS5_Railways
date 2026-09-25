@@ -6,6 +6,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Scanner;
+import java.util.function.Function;
 
 public final class InputValidator {
 
@@ -16,16 +17,42 @@ public final class InputValidator {
 
     private InputValidator() {}
 
-    // =========================================================
-    //  Вспомогательный метод — печатает приглашение и сбрасывает буфер
-    // =========================================================
     private static void prompt(String message) {
         System.out.print(message);
-        System.out.flush();   // ← ключевая строка
+        System.out.flush();
     }
 
     // =========================================================
-    //  Чтение целых чисел
+    //  Универсальный ввод с немедленной валидацией
+    // =========================================================
+
+    /** Читает строку, пока валидатор не вернёт null (нет ошибки). */
+    public static String readValidated(Scanner scanner, String prompt,
+                                       Function<String, String> validator) {
+        while (true) {
+            prompt(prompt);
+            String line = scanner.nextLine().trim();
+            String error = validator.apply(line);
+            if (error == null) {
+                return line;
+            }
+            System.out.println("⚠ " + error + " Введите ещё раз:");
+        }
+    }
+
+    /** Читает строку, соответствующую регулярному выражению. */
+    public static String readRegex(Scanner scanner, String prompt,
+                                   String regex, String errorMessage) {
+        return readValidated(scanner, prompt, line -> {
+            if (line.isEmpty()) {
+                return "Поле не может быть пустым.";
+            }
+            return line.matches(regex) ? null : errorMessage;
+        });
+    }
+
+    // =========================================================
+    //  Базовые методы
     // =========================================================
 
     public static Integer readInt(Scanner scanner, String prompt) {
@@ -41,9 +68,9 @@ public final class InputValidator {
 
     public static int readIntRequired(Scanner scanner, String prompt) {
         while (true) {
-            Integer value = readInt(scanner, prompt);
-            if (value != null) {
-                return value;
+            Integer v = readInt(scanner, prompt);
+            if (v != null) {
+                return v;
             }
         }
     }
@@ -61,16 +88,12 @@ public final class InputValidator {
 
     public static long readLongRequired(Scanner scanner, String prompt) {
         while (true) {
-            Long value = readLong(scanner, prompt);
-            if (value != null) {
-                return value;
+            Long v = readLong(scanner, prompt);
+            if (v != null) {
+                return v;
             }
         }
     }
-
-    // =========================================================
-    //  Чтение строк
-    // =========================================================
 
     public static String readNonEmptyString(Scanner scanner, String prompt) {
         while (true) {
@@ -88,27 +111,23 @@ public final class InputValidator {
         return scanner.nextLine().trim();
     }
 
-    // =========================================================
-    //  Чтение даты и времени
-    // =========================================================
-
     public static LocalDate readDate(Scanner scanner, String prompt) {
-        prompt(prompt + " (формат dd.MM.yyyy): ");
+        prompt(prompt + " (формат dd.mm.yyyy): ");
         String line = scanner.nextLine().trim();
         try {
             return LocalDate.parse(line, DATE_FMT);
         } catch (DateTimeParseException e) {
             System.out.println("⚠ Ошибка: некорректная дата '" + line
-                    + "'. Ожидается dd.MM.yyyy");
+                    + "'. Ожидается dd.mm.yyyy");
             return null;
         }
     }
 
     public static LocalDate readDateRequired(Scanner scanner, String prompt) {
         while (true) {
-            LocalDate value = readDate(scanner, prompt);
-            if (value != null) {
-                return value;
+            LocalDate v = readDate(scanner, prompt);
+            if (v != null) {
+                return v;
             }
         }
     }
@@ -127,16 +146,12 @@ public final class InputValidator {
 
     public static LocalTime readTimeRequired(Scanner scanner, String prompt) {
         while (true) {
-            LocalTime value = readTime(scanner, prompt);
-            if (value != null) {
-                return value;
+            LocalTime v = readTime(scanner, prompt);
+            if (v != null) {
+                return v;
             }
         }
     }
-
-    // =========================================================
-    //  Чтение денежных сумм
-    // =========================================================
 
     public static BigDecimal readBigDecimal(Scanner scanner, String prompt) {
         prompt(prompt);
@@ -151,16 +166,12 @@ public final class InputValidator {
 
     public static BigDecimal readBigDecimalRequired(Scanner scanner, String prompt) {
         while (true) {
-            BigDecimal value = readBigDecimal(scanner, prompt);
-            if (value != null) {
-                return value;
+            BigDecimal v = readBigDecimal(scanner, prompt);
+            if (v != null) {
+                return v;
             }
         }
     }
-
-    // =========================================================
-    //  Подтверждение действия (y/n)
-    // =========================================================
 
     public static boolean confirm(Scanner scanner, String prompt) {
         while (true) {
@@ -175,10 +186,6 @@ public final class InputValidator {
             System.out.println("⚠ Введите 'y' или 'n'");
         }
     }
-
-    // =========================================================
-    //  Форматирование
-    // =========================================================
 
     public static String formatDate(LocalDate date) {
         return date == null ? "—" : date.format(DATE_FMT);

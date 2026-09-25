@@ -15,6 +15,7 @@ import java.util.Scanner;
 
 /**
  * Подменю работы с бронированиями.
+ * Все поля валидируются немедленно при вводе.
  */
 public class BookingMenu {
 
@@ -30,7 +31,9 @@ public class BookingMenu {
         while (true) {
             printMenu();
             Integer choice = InputValidator.readInt(scanner, "Выберите действие: ");
-            if (choice == null) continue;
+            if (choice == null) {
+                continue;
+            }
 
             try {
                 switch (choice) {
@@ -40,7 +43,9 @@ public class BookingMenu {
                     case 4 -> updateBooking();
                     case 5 -> deleteBooking();
                     case 6 -> changeStatus();
-                    case 0 -> { return; }
+                    case 0 -> {
+                        return;
+                    }
                     default -> System.out.println("⚠ Неизвестный пункт меню");
                 }
             } catch (BusinessException e) {
@@ -72,15 +77,27 @@ public class BookingMenu {
 
     private void createBooking() {
         System.out.println("── Создание брони ──");
+
         long passengerId = InputValidator.readLongRequired(scanner, "ID пассажира: ");
-        String train     = InputValidator.readNonEmptyString(scanner, "Номер поезда: ");
-        String from      = InputValidator.readNonEmptyString(scanner, "Станция отправления: ");
-        String to        = InputValidator.readNonEmptyString(scanner, "Станция назначения: ");
-        LocalDate date   = InputValidator.readDateRequired(scanner, "Дата отправления");
-        LocalTime time   = InputValidator.readTimeRequired(scanner, "Время отправления");
-        int wagon        = InputValidator.readIntRequired(scanner, "Номер вагона: ");
-        int seat         = InputValidator.readIntRequired(scanner, "Номер места: ");
-        BigDecimal price = InputValidator.readBigDecimalRequired(scanner, "Цена билета: ");
+
+        String train = InputValidator.readRegex(scanner, "Номер поезда (напр. 123А): ",
+                "^[0-9]{3}[А-Яа-яA-Za-z]$",
+                "Неверный формат номера поезда. Ожидается 3 цифры и буква, например '123А'.");
+
+        String from = InputValidator.readRegex(scanner, "Станция отправления: ",
+                "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$",
+                "Неверное название станции. Допускаются буквы, пробелы и дефис.");
+
+        String to = InputValidator.readRegex(scanner, "Станция назначения: ",
+                "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$",
+                "Неверное название станции.");
+
+        LocalDate date = InputValidator.readDateRequired(scanner, "Дата отправления");
+        LocalTime time = InputValidator.readTimeRequired(scanner, "Время отправления");
+
+        int wagon = readPositiveInt("Номер вагона: ");
+        int seat  = readPositiveInt("Номер места: ");
+        BigDecimal price = readPositiveDecimal("Цена билета: ");
 
         Booking b = new Booking(passengerId, train, from, to, date, time,
                 wagon, seat, price, BookingStatus.CREATED);
@@ -96,27 +113,42 @@ public class BookingMenu {
 
     private void findById() {
         Long id = InputValidator.readLong(scanner, "ID брони: ");
-        if (id == null) return;
+        if (id == null) {
+            return;
+        }
         TablePrinter.printSingleBooking(service.findById(id));
     }
 
     private void updateBooking() {
         Long id = InputValidator.readLong(scanner, "ID брони для редактирования: ");
-        if (id == null) return;
+        if (id == null) {
+            return;
+        }
         Booking existing = service.findById(id);
 
         System.out.println("Текущие данные:");
         TablePrinter.printSingleBooking(existing);
 
         long passengerId = InputValidator.readLongRequired(scanner, "ID пассажира: ");
-        String train     = InputValidator.readNonEmptyString(scanner, "Номер поезда: ");
-        String from      = InputValidator.readNonEmptyString(scanner, "Станция отправления: ");
-        String to        = InputValidator.readNonEmptyString(scanner, "Станция назначения: ");
-        LocalDate date   = InputValidator.readDateRequired(scanner, "Дата отправления");
-        LocalTime time   = InputValidator.readTimeRequired(scanner, "Время отправления");
-        int wagon        = InputValidator.readIntRequired(scanner, "Номер вагона: ");
-        int seat         = InputValidator.readIntRequired(scanner, "Номер места: ");
-        BigDecimal price = InputValidator.readBigDecimalRequired(scanner, "Цена: ");
+
+        String train = InputValidator.readRegex(scanner, "Номер поезда (напр. 123А): ",
+                "^[0-9]{3}[А-Яа-яA-Za-z]$",
+                "Неверный формат номера поезда.");
+
+        String from = InputValidator.readRegex(scanner, "Станция отправления: ",
+                "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$",
+                "Неверное название станции.");
+
+        String to = InputValidator.readRegex(scanner, "Станция назначения: ",
+                "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$",
+                "Неверное название станции.");
+
+        LocalDate date = InputValidator.readDateRequired(scanner, "Дата отправления");
+        LocalTime time = InputValidator.readTimeRequired(scanner, "Время отправления");
+
+        int wagon = readPositiveInt("Номер вагона: ");
+        int seat  = readPositiveInt("Номер места: ");
+        BigDecimal price = readPositiveDecimal("Цена: ");
 
         existing.setPassengerId(passengerId);
         existing.setTrainNumber(train);
@@ -134,7 +166,9 @@ public class BookingMenu {
 
     private void deleteBooking() {
         Long id = InputValidator.readLong(scanner, "ID брони для удаления: ");
-        if (id == null) return;
+        if (id == null) {
+            return;
+        }
         service.findById(id);
         if (!InputValidator.confirm(scanner, "Удалить бронь?")) {
             System.out.println("Отменено");
@@ -146,17 +180,55 @@ public class BookingMenu {
 
     private void changeStatus() {
         Long id = InputValidator.readLong(scanner, "ID брони: ");
-        if (id == null) return;
+        if (id == null) {
+            return;
+        }
         Booking b = service.findById(id);
         System.out.println("Текущий статус: " + b.getStatus());
         System.out.println("Доступные статусы:");
         for (BookingStatus s : BookingStatus.values()) {
             System.out.println("  - " + s.name() + " (" + s.getDisplayName() + ")");
         }
-        String input = InputValidator.readNonEmptyString(scanner, "Новый статус: ");
+
+        String input = InputValidator.readValidated(scanner, "Новый статус: ", line -> {
+            try {
+                BookingStatus.fromString(line);
+                return null;
+            } catch (IllegalArgumentException e) {
+                return e.getMessage();
+            }
+        });
         BookingStatus newStatus = BookingStatus.fromString(input);
 
         service.changeStatus(id, newStatus);
         System.out.println("✔ Статус изменён на " + newStatus);
+    }
+
+    /** Целое ≥ 1. */
+    private int readPositiveInt(String prompt) {
+        String line = InputValidator.readValidated(scanner, prompt, s -> {
+            try {
+                return Integer.parseInt(s) >= 1
+                        ? null
+                        : "Значение должно быть ≥ 1.";
+            } catch (NumberFormatException e) {
+                return "Ожидалось целое число.";
+            }
+        });
+        return Integer.parseInt(line);
+    }
+
+    /** BigDecimal > 0. */
+    private BigDecimal readPositiveDecimal(String prompt) {
+        String line = InputValidator.readValidated(scanner, prompt, s -> {
+            try {
+                return new BigDecimal(s.replace(',', '.')).signum() > 0
+                        ? null
+                        : "Цена должна быть > 0.";
+            } catch (NumberFormatException e) {
+                return "Ожидалось число.";
+            }
+        });
+        return new BigDecimal(line.replace(',', '.'));
     }
 }
