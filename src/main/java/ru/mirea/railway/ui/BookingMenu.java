@@ -21,19 +21,16 @@ import java.util.Scanner;
 /**
  * Подменю работы с бронированиями.
  * Все поля валидируются немедленно при вводе:
- *   - дата: не в прошлом и не позже года вперёд;
- *   - станции не совпадают;
- *   - вагон 1–20, место 1–50, цена 1000–100 000 ₽;
- *   - занятость места (поезд+вагон+место+дата) проверяется сразу при вводе.
+ * - дата: не в прошлом и не позже года вперёд;
+ * - станции не совпадают;
+ * - вагон 1–20, место 1–50, цена 1000–100 000 ₽;
+ * - занятость места (поезд+вагон+место+дата) проверяется сразу при вводе.
  */
 public class BookingMenu {
 
     private static final String STATION_REGEX = "^[А-Яа-яЁёA-Za-z\\s-]{3,150}$";
     private static final String STATION_ERROR =
             "Неверное название станции. Допускаются буквы, пробелы и дефис (от 3 символов).";
-
-    private static final int[] PINK = {255, 105, 180};
-    private static final int[] VIOLET = {138, 43, 226};
 
     private final Scanner scanner;
     private final BookingService service;
@@ -278,7 +275,9 @@ public class BookingMenu {
 
     //  Проверки станции и занятости места
 
-    /** Станция назначения, отличная от станции отправления. */
+    /**
+     * Станция назначения, отличная от станции отправления.
+     */
     private String readStationDifferentFrom(String prompt, String from) {
         return InputValidator.readValidated(scanner, prompt, s -> {
             if (s.isEmpty()) {
@@ -294,7 +293,9 @@ public class BookingMenu {
         });
     }
 
-    /** Место: 1–50 И не занято на поезд/вагон/дату. */
+    /**
+     * Место: 1–50 И не занято на поезд/вагон/дату.
+     */
     private int readFreeSeat(String prompt, String train, int wagon, LocalDate date) {
         String line = InputValidator.readValidated(scanner, prompt, s -> {
             int v;

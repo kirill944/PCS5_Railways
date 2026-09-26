@@ -1,6 +1,6 @@
 package ru.mirea.railway.util;
 
-import static ru.mirea.railway.util.Gradient.between;
+import static ru.mirea.railway.util.Gradient.*;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -21,10 +21,6 @@ import java.util.List;
  * и стилизованной шапкой.
  */
 public final class ExcelExporter {
-
-    private static final int[] PINK   = {255, 105, 180};
-    private static final int[] VIOLET = {138, 43, 226};
-
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("dd.MM.yyyy");
     private static final DateTimeFormatter TIME_FMT =

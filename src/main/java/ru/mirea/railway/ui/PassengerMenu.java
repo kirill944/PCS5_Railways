@@ -53,8 +53,6 @@ public class PassengerMenu {
 
     private static final int MAX_AGE = 150;
 
-    private static final int[] PINK = {255, 105, 180};
-    private static final int[] VIOLET = {138, 43, 226};
 
     private final Scanner scanner;
     private final PassengerService service;

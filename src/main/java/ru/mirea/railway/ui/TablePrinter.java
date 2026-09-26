@@ -14,10 +14,8 @@ import java.util.List;
  */
 public final class TablePrinter {
 
-    private TablePrinter() {}
-
-    private static final int[] PINK = {255, 105, 180};
-    private static final int[] VIOLET = {138, 43, 226};
+    private TablePrinter() {
+    }
 
     public static void printPassengers(List<Passenger> passengers) {
         if (passengers.isEmpty()) {

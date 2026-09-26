@@ -74,11 +74,6 @@ public class ConsoleMenu {
         }
     }
 
-    private static final int[] PINK = {255, 105, 180};   // #FF69B4
-    private static final int[] DEEP_PINK = {199, 21, 133};   // #C71585
-    private static final int[] VIOLET = {138, 43, 226};   // #8A2BE2
-    private static final int[] CYAN = {0, 255, 255};
-
     private void printBanner() {
 
         System.out.println(between("""

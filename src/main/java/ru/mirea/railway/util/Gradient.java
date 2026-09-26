@@ -4,6 +4,10 @@ public final class Gradient {
 
     private Gradient() {
     }
+    public static final int[] PINK      = {255, 105, 180};  // #FF69B4
+    public static final int[] DEEP_PINK = {199,  21, 133};  // #C71585
+    public static final int[] VIOLET    = {138,  43, 226};  // #8A2BE2
+    public static final int[] CYAN      = {  0, 255, 255};
 
     private static final String RESET = "\u001B[0m";
 

@@ -1,6 +1,6 @@
 package ru.mirea.railway.util;
 
-import static ru.mirea.railway.util.Gradient.between;
+import static ru.mirea.railway.util.Gradient.*;
 
 import ru.mirea.railway.exception.DatabaseException;
 
@@ -27,9 +27,6 @@ import java.util.Properties;
  *   db.driver=org.postgresql.Driver
  */
 public final class DatabaseManager {
-
-    private static final int[] PINK   = {255, 105, 180};
-    private static final int[] VIOLET = {138, 43, 226};
 
     private static final String CONFIG_FILE = "db.properties";
 
