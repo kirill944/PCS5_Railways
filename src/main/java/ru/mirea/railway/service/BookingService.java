@@ -1,6 +1,6 @@
 package ru.mirea.railway.service;
 
-import static ru.mirea.railway.util.Gradient.between;
+import static ru.mirea.railway.util.Gradient.*;
 
 import ru.mirea.railway.exception.BusinessException;
 import ru.mirea.railway.exception.EntityNotFoundException;
@@ -31,9 +31,6 @@ import java.util.stream.Collectors;
  *   - место на поезд/вагон/дату уникально (кроме CANCELLED).
  */
 public class BookingService {
-
-    private static final int[] PINK   = {255, 105, 180};
-    private static final int[] VIOLET = {138, 43, 226};
 
     private static final int MAX_WAGON = 20;
     private static final int MAX_SEAT  = 50;
