@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<GridPane xmlns="http://javafx.com/javafx"
+          xmlns:fx="http://javafx.com/fxml"
+          fx:controller="ru.mirea.railway.fx.controller.PassengerFormController"
+          hgap="10" vgap="10">
+    <padding><Insets top="16" right="16" bottom="16" left="16"/></padding>
+
+    <Label text="ФИО:"              GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+    <TextField fx:id="fullNameField" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="300"/>
+
+    <Label text="Паспорт:"          GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+    <TextField fx:id="passportField" GridPane.rowIndex="1" GridPane.columnIndex="1"
+               promptText="1234 123456"/>
+
+    <Label text="Email:"            GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+    <TextField fx:id="emailField"   GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+    <Label text="Телефон:"          GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+    <TextField fx:id="phoneField"   GridPane.rowIndex="3" GridPane.columnIndex="1"
+               promptText="+7XXXXXXXXXX"/>
+
+    <Label text="Дата рождения:"    GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+    <DatePicker fx:id="birthDateField" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+    <HBox spacing="10" GridPane.rowIndex="5" GridPane.columnIndex="0" GridPane.columnSpan="2">
+        <Button text="Сохранить" onAction="#onSave" defaultButton="true"/>
+        <Button text="Отмена"    onAction="#onCancel" cancelButton="true"/>
+        <Label fx:id="errorLabel" styleClass="error"/>
+    </HBox>
+</GridPane>

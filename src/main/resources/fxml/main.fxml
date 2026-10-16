@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="ru.mirea.railway.fx.controller.MainController">
+
+    <!-- ═══════════ ВЕРХНЕЕ МЕНЮ ═══════════ -->
+    <top>
+        <HBox fx:id="menuBar" spacing="4" styleClass="menu-bar">
+            <padding><Insets top="6" right="12" bottom="6" left="12"/></padding>
+            <Button text="Бронирования" onAction="#showBookings"   styleClass="menu-button"/>
+            <Button text="Пассажиры"    onAction="#showPassengers" styleClass="menu-button"/>
+            <Button text="Статистика"   onAction="#onStatistics"   styleClass="menu-button"/>
+            <Button text="Экспорт CSV"  onAction="#onExport"       styleClass="menu-button"/>
+        </HBox>
+    </top>
+
+    <!-- ═══════════ ЦЕНТР — переключаемые панели ═══════════ -->
+    <center>
+        <StackPane fx:id="contentPane">
+            <padding><Insets top="8" right="12" bottom="8" left="12"/></padding>
+
+            <!-- ─── ПАНЕЛЬ БРОНИРОВАНИЙ ─── -->
+            <VBox fx:id="bookingsPane" spacing="8">
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Button text="Добавить бронь"  onAction="#onAdd"/>
+                    <Button text="Изменить бронь"  onAction="#onEdit"/>
+                    <Button text="Удалить бронь"   onAction="#onDelete"/>
+                    <Button text="Обновить"        onAction="#onRefresh"/>
+                </HBox>
+
+                <!-- Поиск -->
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Label text="Поиск:"/>
+                    <TextField fx:id="searchField"
+                               promptText="Поезд / маршрут / пассажир"
+                               prefWidth="280"/>
+                    <Button text="Найти"    onAction="#onSearch"/>
+                    <Button text="Сбросить" onAction="#onResetSearch"/>
+                </HBox>
+
+                <!-- Фильтры -->
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Статус:"/>
+                    <ComboBox fx:id="statusFilter" prefWidth="160"/>
+
+                    <Label text="Дата от:"/>
+                    <DatePicker fx:id="dateFrom"/>
+
+                    <Label text="Дата до:"/>
+                    <DatePicker fx:id="dateTo"/>
+
+                    <Button text="Применить фильтр" onAction="#onFilter"/>
+                    <Button text="Сбросить" onAction="#onResetFilter"/>
+                </HBox>
+
+                <TableView fx:id="bookingTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="colId"        text="ID"        prefWidth="60"/>
+                        <TableColumn fx:id="colPassenger" text="Пассажир"  prefWidth="200"/>
+                        <TableColumn fx:id="colTrain"     text="Поезд"     prefWidth="80"/>
+                        <TableColumn fx:id="colFrom"      text="Откуда"    prefWidth="150"/>
+                        <TableColumn fx:id="colTo"        text="Куда"      prefWidth="150"/>
+                        <TableColumn fx:id="colDate"      text="Дата"      prefWidth="100"/>
+                        <TableColumn fx:id="colTime"      text="Время"     prefWidth="80"/>
+                        <TableColumn fx:id="colWagon"     text="Вагон"     prefWidth="70"/>
+                        <TableColumn fx:id="colSeat"      text="Место"     prefWidth="70"/>
+                        <TableColumn fx:id="colPrice"     text="Цена, ₽"   prefWidth="100"/>
+                        <TableColumn fx:id="colStatus"    text="Статус"    prefWidth="120"/>
+                    </columns>
+                </TableView>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Сортировка:"/>
+                    <Button text="По дате ↑"  onAction="#onSortDateAsc"/>
+                    <Button text="По дате ↓"  onAction="#onSortDateDesc"/>
+                    <Button text="По цене ↑"  onAction="#onSortPriceAsc"/>
+                    <Button text="По цене ↓"  onAction="#onSortPriceDesc"/>
+                </HBox>
+            </VBox>
+
+            <!-- ─── ПАНЕЛЬ ПАССАЖИРОВ ─── -->
+            <VBox fx:id="passengersPane" spacing="8">
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Button text="Добавить пассажира"  onAction="#onAddPassenger"/>
+                    <Button text="Изменить пассажира"  onAction="#onEditPassenger"/>
+                    <Button text="Удалить пассажира"   onAction="#onDeletePassenger"/>
+                    <Button text="Обновить"            onAction="#onRefreshPassengers"/>
+                </HBox>
+
+                <TableView fx:id="passengerTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="colPId"       text="ID"        prefWidth="60"/>
+                        <TableColumn fx:id="colPName"     text="ФИО"       prefWidth="240"/>
+                        <TableColumn fx:id="colPPassport" text="Паспорт"   prefWidth="140"/>
+                        <TableColumn fx:id="colPEmail"    text="Email"     prefWidth="220"/>
+                        <TableColumn fx:id="colPPhone"    text="Телефон"   prefWidth="150"/>
+                        <TableColumn fx:id="colPBirth"    text="Дата рожд." prefWidth="120"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </StackPane>
+    </center>
+
+    <!-- ═══════════ СТАТУС-СТРОКА ═══════════ -->
+    <bottom>
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding><Insets top="6" right="12" bottom="10" left="12"/></padding>
+            <Label fx:id="statusLabel" text="Готово"/>
+        </HBox>
+    </bottom>
+</BorderPane>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ru.mirea.railway.fx.controller.StatisticsController"
+      spacing="10">
+    <padding><Insets top="16" right="16" bottom="16" left="16"/></padding>
+
+    <Label text="Статистика системы" styleClass="h1"/>
+
+    <GridPane hgap="20" vgap="8">
+        <Label text="Всего пассажиров:"    GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <Label fx:id="lblPassengers"       GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+        <Label text="Всего бронирований:"  GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <Label fx:id="lblBookings"         GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+        <Label text="Активных:"            GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <Label fx:id="lblActive"           GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+        <Label text="Завершённых:"         GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <Label fx:id="lblCompleted"        GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+        <Label text="Отменённых:"          GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <Label fx:id="lblCancelled"        GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+        <Label text="Средняя цена:"        GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <Label fx:id="lblAvgPrice"         GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+    </GridPane>
+
+    <Label text="Брони по поездам" styleClass="h2"/>
+    <ListView fx:id="byTrainList" prefHeight="200"/>
+
+    <Button text="Закрыть" onAction="#onClose"/>
+</VBox>
