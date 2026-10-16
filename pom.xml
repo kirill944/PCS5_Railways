@@ -55,8 +55,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>ru.mirea.railway.fx.Launcher</mainClass>
-                    <runtimePathOption>CLASSPATH</runtimePathOption>
+                    <mainClass>ru.mirea.railway.fx.RailwayFxApplication</mainClass>
                     <options>
                         <option>--enable-native-access=ALL-UNNAMED</option>
                         <option>--sun-misc-unsafe-memory-access=allow</option>

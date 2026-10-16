@@ -71,3 +71,14 @@
     -fx-background-color: #70a1ff;
     -fx-text-fill: white;
 }
+/* Поле, заполненное неверно (см. FormValidation.highlight) */
+.text-field.field-error,
+.date-picker.field-error,
+.combo-box.field-error {
+    -fx-border-color: #e84118;
+    -fx-border-width: 1.5;
+}
+.text-field.field-error,
+.date-picker.field-error > .text-field {
+    -fx-background-color: #fff5f3;
+}

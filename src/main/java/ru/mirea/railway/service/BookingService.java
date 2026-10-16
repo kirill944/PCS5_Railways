@@ -1,19 +1,19 @@
 package ru.mirea.railway.service;
 
-import static ru.mirea.railway.util.Gradient.*;
-
 import ru.mirea.railway.exception.BusinessException;
 import ru.mirea.railway.exception.EntityNotFoundException;
+import ru.mirea.railway.exception.ValidationException;
 import ru.mirea.railway.model.Booking;
 import ru.mirea.railway.model.BookingStatus;
 import ru.mirea.railway.repository.BookingRepository;
 import ru.mirea.railway.repository.PassengerRepository;
 import ru.mirea.railway.repository.impl.BookingRepositoryJdbc;
 import ru.mirea.railway.repository.impl.PassengerRepositoryJdbc;
-import ru.mirea.railway.util.InputValidator;
+import ru.mirea.railway.validation.BookingValidator;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,24 +21,16 @@ import java.util.stream.Collectors;
 /**
  * Бизнес-логика работы с бронированиями.
  *
- * Правила:
- *   - номер поезда: 3 цифры + заглавная русская буква (без Ь, Ъ, Ё, Ы);
- *   - станции не совпадают;
- *   - дата отправления: не в прошлом и не позже года вперёд;
- *   - вагон: 1–20;
- *   - место: 1–50;
- *   - цена: 1000–100 000 ₽;
- *   - место на поезд/вагон/дату уникально (кроме CANCELLED).
+ * Формат полей проверяет BookingValidator; здесь — то,
+ * для чего нужна БД:
+ *   - пассажир существует;
+ *   - место на поезд/вагон/дату уникально (кроме CANCELLED);
+ *   - смена статуса допустима по жизненному циклу брони.
+ * При ошибке бросается ValidationException с указанием поля.
  */
 public class BookingService {
 
-    private static final int MAX_WAGON = 20;
-    private static final int MAX_SEAT  = 50;
-
-    private static final BigDecimal MIN_PRICE = new BigDecimal("1000");
-    private static final BigDecimal MAX_PRICE = new BigDecimal("100000");
-
-    private static final int MAX_DAYS_AHEAD = 365;
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
     private final BookingRepository bookingRepository;
     private final PassengerRepository passengerRepository;
@@ -57,22 +49,9 @@ public class BookingService {
     //  CREATE
 
     public Booking create(Booking booking) {
-        validateCommon(booking);
-
-        if (!passengerRepository.existsById(booking.getPassengerId())) {
-            throw new EntityNotFoundException("Пассажир", booking.getPassengerId());
-        }
-
-        if (bookingRepository.isSeatTaken(
-                booking.getTrainNumber(),
-                booking.getWagonNumber(),
-                booking.getSeatNumber(),
-                booking.getDepartureDate())) {
-            throw new BusinessException(between(String.format(
-                    "Место %d в вагоне %d на поезд %s (%s) уже занято",
-                    booking.getSeatNumber(), booking.getWagonNumber(),
-                    booking.getTrainNumber(), booking.getDepartureDate()), PINK, VIOLET));
-        }
+        validateCommon(booking, true);
+        requirePassengerExists(booking.getPassengerId());
+        requireSeatFree(booking);
 
         booking.setStatus(BookingStatus.CREATED);
         return bookingRepository.save(booking);
@@ -82,28 +61,33 @@ public class BookingService {
 
     public void update(Booking booking) {
         if (booking.getId() == null) {
-            throw new BusinessException(between("Не указан ID брони для обновления", PINK, VIOLET));
+            throw new BusinessException("Не указан ID брони для обновления");
         }
         Booking existing = findById(booking.getId());
 
-        validateCommon(booking);
-
-        if (!passengerRepository.existsById(booking.getPassengerId())) {
-            throw new EntityNotFoundException("Пассажир", booking.getPassengerId());
-        }
+        // Окно «не в прошлом и не дальше года» проверяем, только если
+        // дату/время меняют — иначе нельзя исправить прошедшую поездку.
+        boolean departureChanged =
+                !existing.getDepartureDate().equals(booking.getDepartureDate())
+                        || !existing.getDepartureTime().equals(booking.getDepartureTime());
+        validateCommon(booking, departureChanged);
+        requirePassengerExists(booking.getPassengerId());
 
         boolean seatChanged =
                 !existing.getTrainNumber().equals(booking.getTrainNumber())
                         || existing.getWagonNumber() != booking.getWagonNumber()
                         || existing.getSeatNumber() != booking.getSeatNumber()
                         || !existing.getDepartureDate().equals(booking.getDepartureDate());
+        if (seatChanged) {
+            requireSeatFree(booking);
+        }
 
-        if (seatChanged && bookingRepository.isSeatTaken(
-                booking.getTrainNumber(),
-                booking.getWagonNumber(),
-                booking.getSeatNumber(),
-                booking.getDepartureDate())) {
-            throw new BusinessException(between("Новое место уже занято", PINK, VIOLET));
+        BookingStatus from = existing.getStatus();
+        BookingStatus to = booking.getStatus();
+        if (from != to && !from.canTransitionTo(to)) {
+            throw new ValidationException(BookingValidator.STATUS,
+                    "нельзя сменить статус «" + from.getDisplayName() + "» на «"
+                            + to.getDisplayName() + "». " + allowedTransitions(from));
         }
 
         bookingRepository.update(booking);
@@ -148,8 +132,8 @@ public class BookingService {
         BookingStatus current = booking.getStatus();
 
         if (!current.canTransitionTo(newStatus)) {
-            throw new BusinessException(between(String.format(
-                    "Недопустимый переход статуса: %s -> %s", current, newStatus), PINK, VIOLET));
+            throw new BusinessException("Нельзя сменить статус «" + current.getDisplayName()
+                    + "» на «" + newStatus.getDisplayName() + "». " + allowedTransitions(current));
         }
         booking.setStatus(newStatus);
         bookingRepository.update(booking);
@@ -164,7 +148,7 @@ public class BookingService {
 
     public List<Booking> searchByRoute(String from, String to) {
         if ((from == null || from.isBlank()) && (to == null || to.isBlank())) {
-            throw new BusinessException(between("Укажите хотя бы одну станцию для поиска", PINK, VIOLET));
+            throw new BusinessException("Укажите хотя бы одну станцию для поиска");
         }
         return bookingRepository.findByRoute(from, to);
     }
@@ -183,24 +167,24 @@ public class BookingService {
 
     public List<Booking> filterByStatus(BookingStatus status) {
         if (status == null) {
-            throw new BusinessException(between("Статус обязателен для фильтрации", PINK, VIOLET));
+            throw new BusinessException("Выберите статус для фильтрации");
         }
         return bookingRepository.findByStatus(status);
     }
 
     public List<Booking> filterByPassenger(Long passengerId) {
         if (passengerId == null) {
-            throw new BusinessException(between("ID пассажира обязателен", PINK, VIOLET));
+            throw new BusinessException("ID пассажира обязателен");
         }
         return bookingRepository.findByPassengerId(passengerId);
     }
 
     public List<Booking> filterByDateRange(LocalDate from, LocalDate to) {
         if (from == null || to == null) {
-            throw new BusinessException(between("Обе даты обязательны", PINK, VIOLET));
+            throw new BusinessException("Для фильтра по датам укажите обе даты: «с» и «по»");
         }
         if (from.isAfter(to)) {
-            throw new BusinessException(between("Дата 'от' не может быть позже даты 'до'", PINK, VIOLET));
+            throw new BusinessException("Дата «с» не может быть позже даты «по»");
         }
         return bookingRepository.findByDepartureDateBetween(from, to);
     }
@@ -238,72 +222,46 @@ public class BookingService {
 
     //  Внутренние проверки
 
-    private void validateCommon(Booking b) {
+    private void validateCommon(Booking b, boolean checkDepartureWindow) {
         if (b == null) {
-            throw new BusinessException(between("Бронь не может быть null", PINK, VIOLET));
+            throw new BusinessException("Бронь не может быть null");
         }
-        if (b.getPassengerId() == null) {
-            throw new BusinessException(between("Не указан пассажир", PINK, VIOLET));
-        }
+        BookingValidator.validate(b, checkDepartureWindow);
+    }
 
-        if (b.getTrainNumber() == null
-                || !b.getTrainNumber().matches(InputValidator.TRAIN_REGEX)) {
-            throw new BusinessException(between(
-                    "Неверный номер поезда: " + b.getTrainNumber()
-                            + ". " + InputValidator.TRAIN_ERROR, PINK, VIOLET));
+    /** Ссылка на связанную сущность: пассажир должен существовать в БД. */
+    private void requirePassengerExists(Long passengerId) {
+        if (!passengerRepository.existsById(passengerId)) {
+            throw new ValidationException(BookingValidator.PASSENGER,
+                    "пассажир с ID=" + passengerId + " не найден (возможно, он удалён). "
+                            + "Обновите список и выберите пассажира заново.");
         }
+    }
 
-        if (b.getRouteFrom() == null || b.getRouteFrom().isBlank()) {
-            throw new BusinessException(between("Станция отправления обязательна", PINK, VIOLET));
+    private void requireSeatFree(Booking b) {
+        if (bookingRepository.isSeatTaken(b.getTrainNumber(), b.getWagonNumber(),
+                b.getSeatNumber(), b.getDepartureDate())) {
+            throw new ValidationException(BookingValidator.SEAT, String.format(
+                    "место %d в вагоне %d поезда %s на %s уже занято. Выберите другое место или вагон.",
+                    b.getSeatNumber(), b.getWagonNumber(), b.getTrainNumber(),
+                    b.getDepartureDate().format(DATE_FMT)));
         }
-        if (b.getRouteTo() == null || b.getRouteTo().isBlank()) {
-            throw new BusinessException(between("Станция назначения обязательна", PINK, VIOLET));
-        }
-        if (b.getRouteFrom().equalsIgnoreCase(b.getRouteTo())) {
-            throw new BusinessException(between(
-                    "Станция отправления и назначения не могут совпадать", PINK, VIOLET));
-        }
+    }
 
-        if (b.getDepartureDate() == null || b.getDepartureTime() == null) {
-            throw new BusinessException(between("Дата и время отправления обязательны", PINK, VIOLET));
-        }
-
-        LocalDate today = LocalDate.now();
-        LocalDate maxDate = today.plusDays(MAX_DAYS_AHEAD);
-
-        if (b.getDepartureDate().isBefore(today)) {
-            throw new BusinessException(between(
-                    "Дата отправления не может быть в прошлом: " + b.getDepartureDate(), PINK, VIOLET));
-        }
-        if (b.getDepartureDate().isAfter(maxDate)) {
-            throw new BusinessException(between(
-                    "Дата отправления не может быть позже " + maxDate
-                            + " (не более 1 года вперёд)", PINK, VIOLET));
-        }
-
-        if (b.getWagonNumber() < 1 || b.getWagonNumber() > MAX_WAGON) {
-            throw new BusinessException(between(
-                    "Номер вагона должен быть от 1 до " + MAX_WAGON, PINK, VIOLET));
-        }
-        if (b.getSeatNumber() < 1 || b.getSeatNumber() > MAX_SEAT) {
-            throw new BusinessException(between(
-                    "Номер места должен быть от 1 до " + MAX_SEAT, PINK, VIOLET));
-        }
-
-        if (b.getPrice() == null || b.getPrice().compareTo(MIN_PRICE) < 0) {
-            throw new BusinessException(between(
-                    "Цена билета не может быть меньше " + MIN_PRICE + " ₽", PINK, VIOLET));
-        }
-        if (b.getPrice().compareTo(MAX_PRICE) > 0) {
-            throw new BusinessException(between(
-                    "Цена билета не может быть больше " + MAX_PRICE + " ₽", PINK, VIOLET));
-        }
+    private static String allowedTransitions(BookingStatus from) {
+        String allowed = Arrays.stream(BookingStatus.values())
+                .filter(from::canTransitionTo)
+                .map(s -> "«" + s.getDisplayName() + "»")
+                .reduce((a, b) -> a + ", " + b)
+                .orElse(null);
+        return allowed == null
+                ? "Бронь в статусе «" + from.getDisplayName() + "» изменить нельзя."
+                : "Допустимые варианты: " + allowed + ".";
     }
 
     private void requireNonBlank(String value, String fieldName) {
         if (value == null || value.isBlank()) {
-            throw new BusinessException(between(
-                    "Поле '" + fieldName + "' обязательно", PINK, VIOLET));
+            throw new BusinessException("Заполните поле «" + fieldName + "»");
         }
     }
 }
