@@ -11,25 +11,16 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Вспомогательные методы для форм: чтение значений полей
- * и подсветка полей, заполненных неверно.
- */
 public final class FormValidation {
 
     private static final String ERROR_CLASS = "field-error";
 
     private FormValidation() {}
 
-    /** Текст поля без пробелов по краям (никогда не null). */
     public static String text(TextField field) {
         return field.getText() == null ? "" : field.getText().trim();
     }
 
-    /**
-     * Читает дату из DatePicker, включая введённую вручную.
-     * Если текст не удаётся разобрать — добавляет ошибку и возвращает null.
-     */
     public static LocalDate readDate(DatePicker picker, String fieldName, ValidationErrors errors) {
         String raw = picker.getEditor().getText() == null ? "" : picker.getEditor().getText().trim();
         if (raw.isEmpty()) {
@@ -47,10 +38,6 @@ public final class FormValidation {
         }
     }
 
-    /**
-     * Подсвечивает поля с ошибками и ставит фокус на первое из них.
-     * fields — соответствие «название поля → элемент формы».
-     */
     public static void highlight(Map<String, ? extends Control> fields, List<FieldError> errors) {
         fields.values().forEach(c -> c.getStyleClass().remove(ERROR_CLASS));
         Control first = null;
@@ -67,7 +54,6 @@ public final class FormValidation {
         }
     }
 
-    /** Снимает подсветку с поля, как только пользователь начинает его исправлять. */
     public static void clearOnEdit(Map<String, ? extends Control> fields) {
         for (Control c : fields.values()) {
             Runnable clear = () -> c.getStyleClass().remove(ERROR_CLASS);

@@ -20,7 +20,7 @@ public final class CsvExporter {
                                       Map<Long, String> passengerNames,
                                       Path file) throws IOException {
         try (BufferedWriter w = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
-            w.write('\uFEFF'); // BOM — корректная кириллица в Excel
+            w.write('\uFEFF');
             w.write("ID;Пассажир;Поезд;Откуда;Куда;Дата;Время;Вагон;Место;Цена;Статус");
             w.newLine();
 

@@ -32,14 +32,6 @@ import java.util.ResourceBundle;
 
 import static ru.mirea.railway.validation.BookingValidator.*;
 
-/**
- * Контроллер формы добавления / редактирования брони.
- *
- * Сначала разбираются введённые строки (числа, время, дата), затем
- * BookingValidator проверяет правила варианта, и только после этого
- * BookingService проверяет то, что требует БД: существование пассажира,
- * занятость места, допустимость смены статуса.
- */
 public class BookingFormController implements Initializable {
 
     private static final DateTimeFormatter TIME_FMT =
@@ -59,7 +51,6 @@ public class BookingFormController implements Initializable {
     private final BookingService bookingService = new BookingService();
     private final PassengerService passengerService = new PassengerService();
 
-    /** Название поля (как в сообщениях об ошибках) → элемент формы. */
     private final Map<String, Control> fields = new LinkedHashMap<>();
 
     private Stage dialogStage;
@@ -90,7 +81,6 @@ public class BookingFormController implements Initializable {
     public void setExisting(Booking existing) {
         this.existing = existing;
         if (existing == null) {
-            // Новая бронь всегда создаётся в статусе «Создана»
             statusBox.setValue(BookingStatus.CREATED);
             statusBox.setDisable(true);
             return;
@@ -140,7 +130,6 @@ public class BookingFormController implements Initializable {
                 statusBox.getValue(),
                 existing == null ? null : existing.getCreatedAt());
 
-        // Окно дат проверяем для новой брони или если отправление изменили
         boolean departureChanged = existing == null
                 || !existing.getDepartureDate().equals(date)
                 || !existing.getDepartureTime().equals(time);
@@ -159,7 +148,6 @@ public class BookingFormController implements Initializable {
             }
             dialogStage.close();
         } catch (ValidationException e) {
-            // Ошибки, найденные с помощью БД: место занято, пассажир удалён, статус
             showErrors(e.getErrors());
         } catch (EntityNotFoundException e) {
             AlertUtil.error(dialogStage, "Запись не найдена",
@@ -174,11 +162,9 @@ public class BookingFormController implements Initializable {
     @FXML
     private void onCancel() { dialogStage.close(); }
 
-    // ─────────────────── разбор введённых строк ───────────────────
-
     private static LocalTime parseTime(String raw, ValidationErrors errors) {
         if (raw.isEmpty()) {
-            return null; // «обязательное поле» сообщит BookingValidator
+            return null;
         }
         try {
             return LocalTime.parse(raw, TIME_FMT);
@@ -189,7 +175,6 @@ public class BookingFormController implements Initializable {
         }
     }
 
-    /** Возвращает 0, если число не введено или не разобрано (ошибка уже добавлена). */
     private static int parseInt(String raw, String field, int max, ValidationErrors errors) {
         if (raw.isEmpty()) {
             errors.add(field, "обязательное поле — введите целое число от 1 до " + max + ".");
@@ -205,7 +190,7 @@ public class BookingFormController implements Initializable {
 
     private static BigDecimal parsePrice(String raw, ValidationErrors errors) {
         if (raw.isEmpty()) {
-            return null; // «обязательное поле» сообщит BookingValidator
+            return null;
         }
         try {
             return new BigDecimal(raw.replace(',', '.').replace(" ", ""));

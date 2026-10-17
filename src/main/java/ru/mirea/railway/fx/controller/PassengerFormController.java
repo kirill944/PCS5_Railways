@@ -22,14 +22,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Контроллер формы добавления / редактирования пассажира.
- *
- * Используется как модальное диалоговое окно из MainController.
- * Поля ввода описаны в passenger-form.fxml. Формат полей проверяет
- * PassengerValidator, уникальность email и паспорта — PassengerService.
- * Ошибки показываются отдельным окном, неверные поля подсвечиваются.
- */
 public class PassengerFormController {
 
     @FXML private TextField  fullNameField;
@@ -40,7 +32,6 @@ public class PassengerFormController {
 
     private final PassengerService passengerService = new PassengerService();
 
-    /** Название поля (как в сообщениях об ошибках) → элемент формы. */
     private final Map<String, Control> fields = new LinkedHashMap<>();
 
     private Stage dialogStage;
@@ -57,15 +48,10 @@ public class PassengerFormController {
         FormValidation.clearOnEdit(fields);
     }
 
-    /** Устанавливает окно диалога — вызывается MainController'ом. */
     public void setDialogStage(Stage stage) {
         this.dialogStage = stage;
     }
 
-    /**
-     * Передаёт существующего пассажира для редактирования.
-     * При existing == null форма работает в режиме создания.
-     */
     public void setExisting(Passenger existing) {
         this.existing = existing;
         if (existing == null) {
@@ -78,12 +64,9 @@ public class PassengerFormController {
         birthDateField.setValue(existing.getBirthDate());
     }
 
-    /** Результат сохранения — читается MainController'ом после showAndWait(). */
     public Passenger getResult() {
         return result;
     }
-
-    // ─────────────────── сохранение ───────────────────
 
     @FXML
     private void onSave() {
@@ -99,7 +82,6 @@ public class PassengerFormController {
                 FormValidation.text(phoneField),
                 birthDate);
 
-        // Проверяем всё до обращения к БД — пользователь сразу видит все ошибки
         PassengerValidator.validate(candidate, errors);
         if (!errors.isEmpty()) {
             showErrors(errors.list());
@@ -115,7 +97,6 @@ public class PassengerFormController {
             }
             dialogStage.close();
         } catch (ValidationException e) {
-            // Ошибки, найденные с помощью БД: паспорт или email уже заняты
             showErrors(e.getErrors());
         } catch (EntityNotFoundException e) {
             AlertUtil.error(dialogStage, "Запись не найдена",

@@ -13,7 +13,6 @@ import java.util.List;
 public final class AlertUtil {
     private AlertUtil() {}
 
-    /** ANSI-последовательности цвета (\u001B[...m) — актуальны только для консоли. */
     private static final String ANSI_REGEX = "\u001B\\[[;\\d]*m";
 
     public static void info(String title, String message) {
@@ -37,10 +36,6 @@ public final class AlertUtil {
         return a.showAndWait().filter(b -> b == ButtonType.OK).isPresent();
     }
 
-    /**
-     * Окно со списком неверно заполненных полей:
-     * для каждого — название поля и что нужно исправить.
-     */
     public static void validationErrors(Window owner, List<FieldError> errors) {
         Alert a = new Alert(Alert.AlertType.ERROR, null, ButtonType.OK);
         if (owner != null) {
@@ -79,7 +74,6 @@ public final class AlertUtil {
         a.showAndWait();
     }
 
-    /** Убирает консольную раскраску, если она попала в текст сообщения. */
     private static String plain(String message) {
         return message == null ? "" : message.replaceAll(ANSI_REGEX, "");
     }

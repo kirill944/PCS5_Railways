@@ -1,5 +1,6 @@
 package ru.mirea.railway.fx.controller;
 
+import javafx.animation.PauseTransition;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -15,6 +16,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import ru.mirea.railway.exception.BusinessException;
 import ru.mirea.railway.exception.DatabaseException;
 import ru.mirea.railway.exception.EntityNotFoundException;
@@ -35,13 +37,11 @@ import java.util.stream.Collectors;
 
 public class MainController implements Initializable {
 
-    // ─── Контейнеры ───
     @FXML private StackPane contentPane;
     @FXML private TextField searchField;
     @FXML private VBox bookingsPane;
     @FXML private VBox passengersPane;
 
-    // ─── Таблица броней ───
     @FXML private TableView<Booking> bookingTable;
     @FXML private TableColumn<Booking, Long>    colId;
     @FXML private TableColumn<Booking, String>  colPassenger;
@@ -55,7 +55,6 @@ public class MainController implements Initializable {
     @FXML private TableColumn<Booking, String>  colPrice;
     @FXML private TableColumn<Booking, String>  colStatus;
 
-    // ─── Таблица пассажиров ───
     @FXML private TableView<Passenger> passengerTable;
     @FXML private TableColumn<Passenger, Long>   colPId;
     @FXML private TableColumn<Passenger, String> colPName;
@@ -64,11 +63,11 @@ public class MainController implements Initializable {
     @FXML private TableColumn<Passenger, String> colPPhone;
     @FXML private TableColumn<Passenger, String> colPBirth;
 
-    // ─── Фильтры ───
     @FXML private ComboBox<BookingStatus> statusFilter;
     @FXML private DatePicker dateFrom;
     @FXML private DatePicker dateTo;
     @FXML private Label statusLabel;
+    @FXML private Label warningLabel;
 
     private final BookingService bookingService = new BookingService();
     private final PassengerService passengerService = new PassengerService();
@@ -78,10 +77,6 @@ public class MainController implements Initializable {
 
     private final ObservableList<Booking>   bookings   = FXCollections.observableArrayList();
     private final ObservableList<Passenger> passengers = FXCollections.observableArrayList();
-
-    // ══════════════════════════════════════════════════════════════
-    //                         INITIALIZE
-    // ══════════════════════════════════════════════════════════════
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
@@ -95,7 +90,6 @@ public class MainController implements Initializable {
         passengerTable.setItems(passengers);
         passengerTable.setPlaceholder(new Label("Нет данных"));
 
-        // Двойной клик = редактирование
         bookingTable.setRowFactory(tv -> {
             TableRow<Booking> row = new TableRow<>();
             row.setOnMouseClicked(e -> {
@@ -115,16 +109,11 @@ public class MainController implements Initializable {
             return row;
         });
 
-        // По умолчанию — бронирования
         showBookings();
 
         refreshBookings();
         refreshPassengers();
     }
-
-    // ══════════════════════════════════════════════════════════════
-    //                       ПЕРЕКЛЮЧЕНИЕ ПАНЕЛЕЙ
-    // ══════════════════════════════════════════════════════════════
 
     @FXML
     private void showBookings() {
@@ -133,6 +122,7 @@ public class MainController implements Initializable {
         passengersPane.setVisible(false);
         passengersPane.setManaged(false);
         statusLabel.setText("Раздел: Бронирования");
+        clearWarning();
     }
 
     @FXML
@@ -142,11 +132,8 @@ public class MainController implements Initializable {
         bookingsPane.setVisible(false);
         bookingsPane.setManaged(false);
         statusLabel.setText("Раздел: Пассажиры");
+        clearWarning();
     }
-
-    // ══════════════════════════════════════════════════════════════
-    //                   НАСТРОЙКА КОЛОНОК
-    // ══════════════════════════════════════════════════════════════
 
     private void setupBookingColumns() {
         colId.setCellValueFactory(c ->
@@ -198,10 +185,6 @@ public class MainController implements Initializable {
         statusFilter.setItems(FXCollections.observableArrayList(BookingStatus.values()));
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //                       ОБНОВЛЕНИЕ
-    // ══════════════════════════════════════════════════════════════
-
     private void reloadPassengerNames() {
         passengerNames = passengerService.findAll().stream()
                 .collect(Collectors.toMap(Passenger::getId, Passenger::getFullName));
@@ -223,10 +206,6 @@ public class MainController implements Initializable {
             AlertUtil.error("Ошибка БД", e.getMessage());
         }
     }
-
-    // ══════════════════════════════════════════════════════════════
-    //                    CRUD БРОНИРОВАНИЙ
-    // ══════════════════════════════════════════════════════════════
 
     @FXML
     private void onAdd() {
@@ -271,6 +250,7 @@ public class MainController implements Initializable {
         statusFilter.setValue(null);
         dateFrom.setValue(null);
         dateTo.setValue(null);
+        clearWarning();
         refreshBookings();
         statusLabel.setText("Бронирования обновлены. Записей: " + bookings.size());
     }
@@ -296,16 +276,12 @@ public class MainController implements Initializable {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //                    CRUD ПАССАЖИРОВ
-    // ══════════════════════════════════════════════════════════════
-
     @FXML
     private void onAddPassenger() {
         Passenger created = openPassengerForm(null);
         if (created != null) {
             refreshPassengers();
-            refreshBookings(); // имена в таблице броней
+            refreshBookings();
         }
     }
 
@@ -372,26 +348,23 @@ public class MainController implements Initializable {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //                ПОИСК / ФИЛЬТР / СОРТИРОВКА
-    // ══════════════════════════════════════════════════════════════
-
     @FXML
     private void onSearch() {
         String q = searchField.getText();
         if (q == null || q.isBlank()) {
             refreshBookings();
             statusLabel.setText("Пустой запрос — показаны все записи.");
+            clearWarning();
             return;
         }
         try {
-            // Объединяем результаты по трём смысловым полям основной сущности
             Set<Booking> result = new LinkedHashSet<>();
             result.addAll(bookingService.searchByTrainNumber(q));
             result.addAll(bookingService.searchByRoute(q, q));
             result.addAll(bookingService.searchByPassengerName(q));
             bookings.setAll(result);
             statusLabel.setText("Найдено: " + result.size());
+            clearWarning();
         } catch (BusinessException e) {
             AlertUtil.warn("Поиск", e.getMessage());
         } catch (DatabaseException e) {
@@ -404,15 +377,33 @@ public class MainController implements Initializable {
         searchField.clear();
         refreshBookings();
         statusLabel.setText("Поиск сброшен.");
+        clearWarning();
     }
 
     @FXML
     private void onFilter() {
-        try {
-            BookingStatus status = statusFilter.getValue();
-            LocalDate from = dateFrom.getValue();
-            LocalDate to = dateTo.getValue();
+        BookingStatus status = statusFilter.getValue();
+        LocalDate from = dateFrom.getValue();
+        LocalDate to   = dateTo.getValue();
 
+        if (from == null && to == null) {
+            showWarning("Выберите Даты от и до");
+            return;
+        }
+        if (from == null) {
+            showWarning("Выберите Дату от");
+            return;
+        }
+        if (to == null) {
+            showWarning("Выберите Дату до");
+            return;
+        }
+        if (from.isAfter(to)) {
+            showWarning("Дата от не может быть позже Даты до");
+            return;
+        }
+
+        try {
             List<Booking> result = bookingService.findAll();
 
             if (status != null) {
@@ -420,19 +411,17 @@ public class MainController implements Initializable {
                         .filter(b -> b.getStatus() == status)
                         .collect(Collectors.toList());
             }
-            if (from != null && to != null) {
-                if (from.isAfter(to)) {
-                    AlertUtil.warn("Фильтр", "Дата 'от' позже даты 'до'.");
-                    return;
-                }
-                result = result.stream()
-                        .filter(b -> b.getDepartureDate() != null
-                                && !b.getDepartureDate().isBefore(from)
-                                && !b.getDepartureDate().isAfter(to))
-                        .collect(Collectors.toList());
-            }
+            result = result.stream()
+                    .filter(b -> b.getDepartureDate() != null
+                            && !b.getDepartureDate().isBefore(from)
+                            && !b.getDepartureDate().isAfter(to))
+                    .collect(Collectors.toList());
+
             bookings.setAll(result);
-            statusLabel.setText("После фильтра: " + result.size());
+            clearWarning();
+            statusLabel.setText("После фильтра: " + result.size()
+                    + " (" + from + " — " + to
+                    + (status != null ? ", " + status.getDisplayName() : "") + ")");
         } catch (DatabaseException e) {
             AlertUtil.error("Ошибка БД", e.getMessage());
         }
@@ -443,7 +432,9 @@ public class MainController implements Initializable {
         statusFilter.setValue(null);
         dateFrom.setValue(null);
         dateTo.setValue(null);
+        clearWarning();
         refreshBookings();
+        statusLabel.setText("Фильтр сброшен.");
     }
 
     @FXML private void onSortDateAsc()  { sortBookings(Comparator.comparing(Booking::getDepartureDate,
@@ -460,10 +451,6 @@ public class MainController implements Initializable {
         sorted.sort(cmp);
         bookings.setAll(sorted);
     }
-
-    // ══════════════════════════════════════════════════════════════
-    //                       СТАТИСТИКА
-    // ══════════════════════════════════════════════════════════════
 
     @FXML
     private void onStatistics() {
@@ -484,10 +471,6 @@ public class MainController implements Initializable {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //                          ЭКСПОРТ
-    // ══════════════════════════════════════════════════════════════
-
     @FXML
     private void onExport() {
         FileChooser chooser = new FileChooser();
@@ -505,5 +488,21 @@ public class MainController implements Initializable {
         } catch (Exception e) {
             AlertUtil.error("Ошибка экспорта", e.getMessage());
         }
+    }
+
+    private void showWarning(String message) {
+        warningLabel.setText(message);
+        warningLabel.setVisible(true);
+        warningLabel.setManaged(true);
+
+        PauseTransition pause = new PauseTransition(Duration.seconds(4));
+        pause.setOnFinished(e -> clearWarning());
+        pause.play();
+    }
+
+    private void clearWarning() {
+        warningLabel.setVisible(false);
+        warningLabel.setManaged(false);
+        warningLabel.setText("");
     }
 }
