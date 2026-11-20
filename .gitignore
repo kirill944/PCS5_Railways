@@ -24,9 +24,6 @@ bin/
 /nbdist/
 /.nb-gradle/
 
-### VS Code ###
-.vscode/
-
 ### Mac OS ###
 .DS_Store
 
@@ -34,3 +31,19 @@ bin/
 
 export/bookings.xlsx
 src/main/resources/db.properties
+
+# Environment
+.env
+backend/.env
+
+# Maven
+target/
+backend/target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Docker
+postgres_data/
