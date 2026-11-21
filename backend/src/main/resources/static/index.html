@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Railway Booking System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 20px; background: #f8f9fa; }
+        .hidden { display: none !important; }
+        .card { margin-bottom: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .table-container { max-height: 400px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <h2>Панель управления бронированиями</h2>
+
+    <!-- Блок авторизации -->
+    <div id="authBlock" class="card p-3 mt-3">
+        <h5>Вход в систему</h5>
+        <div class="row g-2 align-items-end">
+            <div class="col-auto">
+                <input type="email" id="loginEmail" class="form-control" value="admin@railway.local" placeholder="Email">
+            </div>
+            <div class="col-auto">
+                <input type="password" id="loginPassword" class="form-control" value="Adm1!ChangeMe2026" placeholder="Пароль">
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary" onclick="login()">Войти</button>
+            </div>
+            <div class="col-auto text-danger" id="loginError"></div>
+        </div>
+    </div>
+
+    <!-- Основной интерфейс (скрыт до входа) -->
+    <div id="mainBlock" class="hidden">
+        <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+            <span>Вы вошли как: <b id="userEmail"></b></span>
+            <button class="btn btn-sm btn-outline-danger" onclick="logout()">Выйти</button>
+        </div>
+
+        <!-- Блок бронирований -->
+        <div class="card p-3">
+            <h5>Список бронирований</h5>
+
+            <!-- Фильтры -->
+            <div class="row g-2 mb-3">
+                <div class="col-md-3">
+                    <input type="text" id="searchFilter" class="form-control form-control-sm" placeholder="Поиск (поезд, город)">
+                </div>
+                <div class="col-md-2">
+                    <select id="statusFilter" class="form-select form-select-sm">
+                        <option value="">Все статусы</option>
+                        <option value="CREATED">CREATED</option>
+                        <option value="CONFIRMED">CONFIRMED</option>
+                        <option value="PAID">PAID</option>
+                        <option value="COMPLETED">COMPLETED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select id="archivedFilter" class="form-select form-select-sm">
+                        <option value="false">Активные</option>
+                        <option value="true">Архивные</option>
+                        <option value="">Все</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-sm btn-primary w-100" onclick="loadBookings()">Применить</button>
+                </div>
+                <div class="col-md-3 text-end">
+                    <button class="btn btn-sm btn-success" onclick="showCreateForm()">+ Создать бронь</button>
+                </div>
+            </div>
+
+            <!-- Таблица -->
+            <div class="table-container">
+                <table class="table table-sm table-hover align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Код</th>
+                        <th>Поезд</th>
+                        <th>Маршрут</th>
+                        <th>Дата</th>
+                        <th>Пассажир</th>
+                        <th>Цена</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                    </thead>
+                    <tbody id="bookingsTable"></tbody>
+                </table>
+            </div>
+            <!-- Пагинация -->
+            <div class="d-flex justify-content-between align-items-center mt-2">
+                <span id="pageInfo" class="text-muted small"></span>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="prevPage()">Назад</button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="nextPage()">Вперед</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Блок аналитики -->
+        <div class="card p-3 mt-3">
+            <h5>Аналитика</h5>
+            <div id="analyticsBlock" class="row text-center"></div>
+        </div>
+
+        <!-- Блок аудита -->
+        <div class="card p-3 mt-3">
+            <h5>Журнал аудита (последние 10 событий)</h5>
+            <table class="table table-sm text-muted small">
+                <thead><tr><th>Время</th><th>Кто</th><th>Событие</th><th>Описание</th></tr></thead>
+                <tbody id="auditTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Модальное окно создания -->
+    <div class="modal fade" id="createModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Новая бронь</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <input type="text" id="cTrain" class="form-control" placeholder="Номер поезда">
+                    </div>
+                    <div class="mb-2">
+                        <input type="text" id="cFrom" class="form-control" placeholder="Откуда">
+                    </div>
+                    <div class="mb-2">
+                        <input type="text" id="cTo" class="form-control" placeholder="Куда">
+                    </div>
+                    <div class="mb-2">
+                        <input type="date" id="cDate" class="form-control">
+                    </div>
+                    <div class="mb-2 row">
+                        <div class="col"><input type="number" id="cWagon" class="form-control" placeholder="Вагон"></div>
+                        <div class="col"><input type="number" id="cSeat" class="form-control" placeholder="Место"></div>
+                    </div>
+                    <div class="mb-2">
+                        <input type="number" id="cPrice" class="form-control" placeholder="Цена">
+                    </div>
+                    <div class="mb-2">
+                        <input type="text" id="cPassId" class="form-control" placeholder="UUID пассажира">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button class="btn btn-primary" onclick="createBooking()">Создать</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let token = localStorage.getItem('accessToken');
+    let currentPage = 0;
+    const pageSize = 5;
+
+    function showMain() {
+        document.getElementById('authBlock').classList.add('hidden');
+        document.getElementById('mainBlock').classList.remove('hidden');
+        document.getElementById('userEmail').innerText = "admin@railway.local";
+        loadBookings();
+        loadAnalytics();
+        loadAudit();
+    }
+
+    // --- АВТОРИЗАЦИЯ ---
+    async function login() {
+        const email = document.getElementById('loginEmail').value;
+        const pass = document.getElementById('loginPassword').value;
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email, password: pass})
+            });
+            if (!res.ok) throw new Error('Неверный логин или пароль');
+            const data = await res.json();
+            token = data.accessToken;
+            localStorage.setItem('accessToken', token);
+            document.getElementById('loginError').innerText = '';
+            showMain();
+        } catch (e) {
+            document.getElementById('loginError').innerText = e.message;
+        }
+    }
+
+    function logout() {
+        localStorage.removeItem('accessToken');
+        location.reload();
+    }
+
+    // --- БРОНИРОВАНИЯ ---
+    async function loadBookings() {
+        const search = document.getElementById('searchFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        const archived = document.getElementById('archivedFilter').value;
+
+        let url = `/api/bookings?page=${currentPage}&size=${pageSize}&sortBy=createdAt&sortDir=desc`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+        if (status) url += `&status=${status}`;
+        if (archived !== "") url += `&archived=${archived}`;
+
+        const res = await fetch(url, {
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+        if (res.status === 401 || res.status === 403) return logout();
+
+        const data = await res.json();
+        const tbody = document.getElementById('bookingsTable');
+        tbody.innerHTML = '';
+
+        data.content.forEach(b => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><small>${b.externalCode}</small></td>
+                <td>${b.trainNumber}</td>
+                <td>${b.routeFrom} → ${b.routeTo}</td>
+                <td>${b.departureDate} ${b.departureTime.substring(0,5)}</td>
+                <td>${b.passengerName}</td>
+                <td>${b.price}</td>
+                <td><span class="badge bg-secondary">${b.status}</span></td>
+                <td>
+                    ${b.archived
+                ? `<button class="btn btn-sm btn-outline-success" onclick="actionBooking('${b.id}', 'restore')">Восст.</button>`
+                : `<button class="btn btn-sm btn-outline-danger" onclick="actionBooking('${b.id}', 'archive')">В архив</button>`
+            }
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('pageInfo').innerText = `Страница ${data.page + 1} из ${data.totalPages} (Всего: ${data.totalElements})`;
+    }
+
+    async function actionBooking(id, action) {
+        const method = action === 'archive' ? 'DELETE' : 'POST';
+        const url = action === 'archive' ? `/api/bookings/${id}` : `/api/bookings/${id}/restore`;
+        await fetch(url, {method, headers: {'Authorization': 'Bearer ' + token}});
+        loadBookings();
+        loadAnalytics();
+    }
+
+    function prevPage() { if (currentPage > 0) { currentPage--; loadBookings(); } }
+    function nextPage() { currentPage++; loadBookings(); }
+
+    // --- АНАЛИТИКА ---
+    async function loadAnalytics() {
+        const res = await fetch('/api/analytics/summary', {headers: {'Authorization': 'Bearer ' + token}});
+        const data = await res.json();
+        document.getElementById('analyticsBlock').innerHTML = `
+            <div class="col"><h6>Всего</h6><h3>${data.totalCount}</h3></div>
+            <div class="col"><h6>Активных</h6><h3>${data.activeCount}</h3></div>
+            <div class="col"><h6>В архиве</h6><h3>${data.archivedCount}</h3></div>
+            <div class="col"><h6>Средний чек</h6><h3>${data.averagePrice}</h3></div>
+            <div class="col"><h6>Оплачено</h6><h3>${data.paidCount}</h3></div>
+        `;
+    }
+
+    // --- АУДИТ ---
+    async function loadAudit() {
+        const res = await fetch('/api/admin/audit?page=0&size=10', {headers: {'Authorization': 'Bearer ' + token}});
+        const data = await res.json();
+        const tbody = document.getElementById('auditTable');
+        tbody.innerHTML = '';
+        data.content.forEach(a => {
+            tbody.innerHTML += `<tr>
+                <td>${new Date(a.createdAt).toLocaleString()}</td>
+                <td>${a.actorEmail || 'system'}</td>
+                <td>${a.eventType}</td>
+                <td>${a.description}</td>
+            </tr>`;
+        });
+    }
+
+    // --- МОДАЛЬНОЕ ОКНО ---
+    function showCreateForm() {
+        new bootstrap.Modal(document.getElementById('createModal')).show();
+    }
+
+    async function createBooking() {
+        const body = {
+            passengerId: document.getElementById('cPassId').value,
+            trainNumber: document.getElementById('cTrain').value,
+            routeFrom: document.getElementById('cFrom').value,
+            routeTo: document.getElementById('cTo').value,
+            departureDate: document.getElementById('cDate').value,
+            departureTime: "12:00:00",
+            wagonNumber: parseInt(document.getElementById('cWagon').value),
+            seatNumber: parseInt(document.getElementById('cSeat').value),
+            price: parseFloat(document.getElementById('cPrice').value),
+            paid: false
+        };
+
+        const res = await fetch('/api/bookings', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+            body: JSON.stringify(body)
+        });
+
+        if (res.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('createModal')).hide();
+            loadBookings();
+        } else {
+            const err = await res.json();
+            alert('Ошибка: ' + (err.message || 'Не удалось создать'));
+        }
+    }
+
+    // Инициализация при загрузке
+    if (token) showMain();
+</script>
+</body>
+</html>
