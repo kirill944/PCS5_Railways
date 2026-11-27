@@ -1,6 +1,7 @@
 package ru.mirea.railways.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mirea.railways.domain.AuditEvent;
 import ru.mirea.railways.filter.CorrelationIdFilter;
@@ -20,8 +21,27 @@ public class AuditService {
 
     @Transactional
     public void log(String eventType, String entityType, UUID entityId, String description) {
+        save(CurrentUser.email(), eventType, entityType, entityId, description);
+    }
+
+    /**
+     * Запись события, которое происходит внутри операции, завершающейся
+     * исключением (например, блокировка учётной записи в login()).
+     * REQUIRES_NEW гарантирует коммит независимо от отката вызывающей транзакции,
+     * иначе событие LOGIN_BLOCKED терялось.
+     * Автор передаётся явно: на момент входа аутентификация ещё не установлена,
+     * и CurrentUser.email() вернул бы anonymousUser.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void logAs(String actorEmail, String eventType, String entityType,
+                      UUID entityId, String description) {
+        save(actorEmail, eventType, entityType, entityId, description);
+    }
+
+    private void save(String actorEmail, String eventType, String entityType,
+                      UUID entityId, String description) {
         AuditEvent e = new AuditEvent();
-        e.setActorEmail(CurrentUser.email());
+        e.setActorEmail(actorEmail);
         e.setEventType(eventType);
         e.setEntityType(entityType);
         e.setEntityId(entityId);

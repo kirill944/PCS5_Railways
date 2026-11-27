@@ -25,6 +25,11 @@ public class CsvService {
     private final BookingService bookingService;
     private final Map<String, String> previewCache = new LinkedHashMap<>();
 
+    /** Колонки, без которых разбор CSV бессмысленен (молча давал «0 строк»). */
+    private static final Set<String> REQUIRED_HEADERS = Set.of(
+            "trainNumber", "routeFrom", "routeTo", "departureDate",
+            "departureTime", "wagonNumber", "seatNumber", "price", "passengerEmail");
+
     public CsvService(BookingRepository bookings, PassengerRepository passengers, BookingService bookingService) {
         this.bookings = bookings; this.passengers = passengers; this.bookingService = bookingService;
     }
@@ -51,6 +56,9 @@ public class CsvService {
         try (CSVParser parser = CSVParser.parse(r.csvContent(), CSVFormat.DEFAULT
                 .withFirstRecordAsHeader()
                 .withIgnoreEmptyLines())) {
+
+            requireHeaders(parser, r.mode());
+
             for (CSVRecord rec : parser) {
                 try {
                     validateRecord(rec, r.mode());
@@ -78,13 +86,21 @@ public class CsvService {
         int created = 0, updated = 0, invalid = 0;
         List<String> errors = new ArrayList<>();
         try (CSVParser parser = CSVParser.parse(csv, CSVFormat.DEFAULT.withFirstRecordAsHeader().withIgnoreEmptyLines())) {
+            requireHeaders(parser, mode);
             for (CSVRecord rec : parser) {
                 try {
                     if ("UPDATE".equalsIgnoreCase(mode)) {
+                        // Ищем по коду из CSV. Раньше здесь был bookings.findAll() в цикле
+                        // (полный скан на каждую строку) и при совпадении делался только
+                        // updated++ — ни одно поле не записывалось, UPDATE не работал.
                         String code = rec.get("externalCode");
-                        Optional<Booking> existing = bookings.findAll().stream()
-                                .filter(b -> b.getExternalCode().equals(code)).findFirst();
-                        if (existing.isPresent()) { updated++; continue; }
+                        Optional<Booking> existing = bookings.findByExternalCodeIgnoreCase(code);
+                        if (existing.isPresent()) {
+                            applyRecordTo(existing.get(), rec);
+                            bookings.save(existing.get());
+                            updated++;
+                            continue;
+                        }
                     }
                     applyRecord(rec);
                     created++;
@@ -97,6 +113,30 @@ public class CsvService {
             throw new BusinessException("Ошибка применения CSV: " + e.getMessage());
         }
         return new ImportPreviewResponse(created + updated + invalid, created + updated, invalid, errors, null);
+    }
+
+    /**
+     * Проверяет наличие обязательных колонок. Без этой проверки CSV вида "a,b,c"
+     * считался корректным и давал 200 с нулём строк вместо понятной ошибки.
+     */
+    private void requireHeaders(CSVParser parser, String mode) {
+        Map<String, Integer> headers = parser.getHeaderMap();
+        if (headers == null || headers.isEmpty()) {
+            throw new BusinessException("CSV без заголовка: первая строка должна содержать "
+                    + "названия колонок, например: " + String.join(", ", REQUIRED_HEADERS));
+        }
+        java.util.List<String> missing = REQUIRED_HEADERS.stream()
+                .filter(h -> !headers.containsKey(h))
+                .sorted()
+                .toList();
+        if ("UPDATE".equalsIgnoreCase(mode) && !headers.containsKey("externalCode")) {
+            missing = new java.util.ArrayList<>(missing);
+            missing.add("externalCode (обязателен для режима UPDATE)");
+        }
+        if (!missing.isEmpty()) {
+            throw new BusinessException("В CSV отсутствуют обязательные колонки: "
+                    + String.join(", ", missing));
+        }
     }
 
     private void validateRecord(CSVRecord rec, String mode) {
@@ -113,12 +153,25 @@ public class CsvService {
     }
 
     private void applyRecord(CSVRecord rec) {
+        Booking b = new Booking();
+        applyRecordTo(b, rec);
+        bookings.save(b);
+    }
+
+    /**
+     * Переносит поля строки CSV в сущность. Используется и при создании,
+     * и при обновлении — раньше внешний код из CSV игнорировался, из-за чего
+     * режим UPDATE не мог найти запись и создавал дубликат.
+     */
+    private void applyRecordTo(Booking b, CSVRecord rec) {
         String passengerEmail = rec.get("passengerEmail");
         Passenger p = passengers.findAll().stream()
                 .filter(x -> x.getEmail().equalsIgnoreCase(passengerEmail))
                 .findFirst().orElseThrow(() -> new IllegalArgumentException("Passenger not found: " + passengerEmail));
-        Booking b = new Booking();
         b.setPassenger(p);
+        // Внешний код из CSV сохраняем, иначе UPDATE никогда не найдёт запись
+        if (rec.isMapped("externalCode") && !rec.get("externalCode").isBlank())
+            b.setExternalCode(rec.get("externalCode"));
         b.setTrainNumber(rec.get("trainNumber"));
         b.setRouteFrom(rec.get("routeFrom"));
         b.setRouteTo(rec.get("routeTo"));
@@ -128,8 +181,8 @@ public class CsvService {
         b.setSeatNumber(Integer.parseInt(rec.get("seatNumber")));
         b.setPrice(new BigDecimal(rec.get("price")));
         if (rec.isMapped("status") && !rec.get("status").isBlank())
-            b.setStatus(ru.mirea.railways.domain.BookingStatus.valueOf(rec.get("status")));
-        if (rec.isMapped("paid")) b.setPaid(Boolean.parseBoolean(rec.get("paid")));
-        bookings.save(b);
+            b.setStatus(ru.mirea.railways.domain.BookingStatus.parse(rec.get("status")));
+        if (rec.isMapped("paid") && !rec.get("paid").isBlank())
+            b.setPaid(Boolean.parseBoolean(rec.get("paid")));
     }
 }

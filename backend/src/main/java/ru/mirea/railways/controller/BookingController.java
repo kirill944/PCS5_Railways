@@ -2,6 +2,7 @@ package ru.mirea.railways.controller;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import ru.mirea.railways.config.AppProperties;
 import ru.mirea.railways.domain.BookingRiskLevel;
@@ -45,8 +46,8 @@ public class BookingController {
             @RequestParam(defaultValue = "20") int size
     ) {
         BookingFilter f = new BookingFilter(search, passengerId,
-                status == null ? null : BookingStatus.valueOf(status),
-                riskLevel == null ? null : BookingRiskLevel.valueOf(riskLevel),
+                BookingStatus.parse(status),
+                BookingRiskLevel.parse(riskLevel),
                 paid, archived, tag, priceOp, priceValue, sortBy, sortDir);
         return service.search(f, page, size, sortBy, sortDir);
     }
@@ -74,6 +75,12 @@ public class BookingController {
         service.restore(id); return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Окончательное (безвозвратное) удаление — требование КР3 п. 3.6:
+     * только администратор. До этого метода проверялась лишь роль EDITOR/ADMIN
+     * из SecurityConfig, то есть редактор тоже мог удалять при включённом флаге.
+     */
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}/permanent")
     public ResponseEntity<Void> permanent(@PathVariable UUID id) {
         service.permanentDelete(id, props.security().permanentDeleteEnabled());
@@ -101,7 +108,7 @@ public class BookingController {
             @RequestParam(defaultValue = "1000") int max
     ) {
         BookingFilter f = new BookingFilter(search, null,
-                status == null ? null : BookingStatus.valueOf(status),
+                BookingStatus.parse(status),
                 null, null, archived, null, null, null, "createdAt", "desc");
         return ResponseEntity.ok()
                 .header("Content-Type", "text/csv; charset=utf-8")

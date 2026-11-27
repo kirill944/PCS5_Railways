@@ -23,6 +23,11 @@ public class BookingService {
     private final PassengerService passengers;
     private final AuditService audit;
 
+    /** Поля, по которым действительно можно сортировать (иначе PropertyReferenceException -> 500). */
+    private static final Set<String> SORTABLE_FIELDS = Set.of(
+            "createdAt", "updatedAt", "departureDate", "departureTime",
+            "trainNumber", "routeFrom", "routeTo", "price", "status", "externalCode");
+
     public BookingService(BookingRepository repo, TagRepository tagRepo,
                           PassengerService passengers, AuditService audit) {
         this.repo = repo; this.tagRepo = tagRepo;
@@ -31,8 +36,8 @@ public class BookingService {
 
     public PageResponse<BookingResponse> search(BookingFilter filter, int page, int size, String sortBy, String sortDir) {
         int safeSize = Math.min(Math.max(size, 1), 100);
-        Sort sort = Sort.by("desc".equalsIgnoreCase(sortDir) ? Sort.Direction.DESC : Sort.Direction.ASC,
-                sortBy == null || sortBy.isBlank() ? "createdAt" : sortBy);
+        String field = SORTABLE_FIELDS.contains(sortBy) ? sortBy : "createdAt";
+        Sort sort = Sort.by("desc".equalsIgnoreCase(sortDir) ? Sort.Direction.DESC : Sort.Direction.ASC, field);
         Pageable pageable = PageRequest.of(Math.max(page, 0), safeSize, sort);
         Page<Booking> result = repo.findAll(BookingSpecification.from(filter), pageable);
         List<BookingResponse> content = result.getContent().stream().map(this::toDto).toList();
@@ -40,6 +45,12 @@ public class BookingService {
                 result.getTotalElements(), result.getTotalPages(), result.hasNext());
     }
 
+    /**
+     * Чтение одной брони. Транзакция обязательна: open-in-view отключён,
+     * поэтому ленивый b.getPassenger() нужно инициализировать внутри сессии,
+     * иначе toDto() падает с LazyInitializationException (500).
+     */
+    @Transactional(readOnly = true)
     public BookingResponse get(UUID id) {
         return toDto(require(id));
     }
@@ -52,11 +63,8 @@ public class BookingService {
         Booking b = new Booking();
         apply(b, r, p);
         // При создании статус по умолчанию CREATED (если не передан явно)
-        if (r.status() != null) {
-            b.setStatus(BookingStatus.valueOf(r.status()));
-        } else {
-            b.setStatus(BookingStatus.CREATED);
-        }
+        BookingStatus requested = BookingStatus.parse(r.status());
+        b.setStatus(requested == null ? BookingStatus.CREATED : requested);
         return toDto(repo.save(b));
     }
 
@@ -72,9 +80,9 @@ public class BookingService {
         validateDates(r);
 
         // 3. Валидация статуса (переходов)
-        if (r.status() != null) {
-            BookingStatus newStatus = BookingStatus.valueOf(r.status());
-            validateStatusTransition(b.getStatus(), newStatus);
+        BookingStatus requested = BookingStatus.parse(r.status());
+        if (requested != null) {
+            validateStatusTransition(b.getStatus(), requested);
         }
 
         // 4. Проверка занятости места
@@ -120,7 +128,10 @@ public class BookingService {
                     case "ARCHIVE" -> b.setArchived(true);
                     case "RESTORE" -> b.setArchived(false);
                     case "STATUS" -> {
-                        BookingStatus newStatus = BookingStatus.valueOf(r.status());
+                        BookingStatus newStatus = BookingStatus.parse(r.status());
+                        if (newStatus == null) {
+                            throw new BusinessException("Для массовой смены статуса укажите поле status");
+                        }
                         validateStatusTransition(b.getStatus(), newStatus);
                         b.setStatus(newStatus);
                     }
@@ -171,17 +182,18 @@ public class BookingService {
     }
 
     private void checkSeatFree(BookingRequest r, UUID excludeId) {
-        // Используется для быстрой проверки. В БД также добавлен уникальный индекс (доработка 2)
-        BookingFilter f = new BookingFilter(null, null, null, null, null, false, null, null, null, null, null);
-        Page<Booking> existing = repo.findAll(BookingSpecification.from(f), PageRequest.of(0, 1000));
-        for (Booking b : existing.getContent()) {
-            if (b.getId().equals(excludeId)) continue;
-            if (b.getTrainNumber().equals(r.trainNumber())
-                    && b.getDepartureDate().equals(r.departureDate())
-                    && b.getWagonNumber() == r.wagonNumber()
-                    && b.getSeatNumber() == r.seatNumber()) {
-                throw new BusinessException("Место уже занято");
-            }
+        // Запрос к БД вместо перебора страниц в Java: быстро и не зависит от лимита 1000.
+        boolean taken = excludeId == null
+                ? repo.existsByTrainNumberAndDepartureDateAndWagonNumberAndSeatNumberAndStatusNotAndArchivedFalse(
+                        r.trainNumber(), r.departureDate(), r.wagonNumber(), r.seatNumber(),
+                        BookingStatus.CANCELLED)
+                : repo.existsByTrainNumberAndDepartureDateAndWagonNumberAndSeatNumberAndStatusNotAndArchivedFalseAndIdNot(
+                        r.trainNumber(), r.departureDate(), r.wagonNumber(), r.seatNumber(),
+                        BookingStatus.CANCELLED, excludeId);
+        if (taken) {
+            throw new BusinessException(String.format(
+                    "Место %d в вагоне %d поезда %s на %s уже занято. Выберите другое место или вагон.",
+                    r.seatNumber(), r.wagonNumber(), r.trainNumber(), r.departureDate()));
         }
     }
 
@@ -199,7 +211,8 @@ public class BookingService {
         b.setWagonNumber(r.wagonNumber());
         b.setSeatNumber(r.seatNumber());
         b.setPrice(r.price());
-        if (r.status() != null) b.setStatus(BookingStatus.valueOf(r.status()));
+        BookingStatus requested = BookingStatus.parse(r.status());
+        if (requested != null) b.setStatus(requested);
         b.setPaid(r.paid());
         if (r.tags() != null) {
             Set<Tag> tags = new HashSet<>();

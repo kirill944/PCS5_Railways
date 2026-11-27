@@ -48,7 +48,10 @@ public class AdminController {
     ) {
         Pageable p = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100),
                 Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<AuditEvent> result = audit.findAll(p);
+        // Параметр eventType объявлен давно, но не применялся — фильтр игнорировался
+        Page<AuditEvent> result = (eventType == null || eventType.isBlank())
+                ? audit.findAll(p)
+                : audit.findByEventType(eventType, p);
         return new PageResponse<>(result.getContent().stream().map(this::toDto).toList(),
                 result.getNumber(), result.getSize(), result.getTotalElements(),
                 result.getTotalPages(), result.hasNext());

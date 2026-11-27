@@ -9,11 +9,14 @@
         .hidden { display: none !important; }
         .card { margin-bottom: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         .table-container { max-height: 400px; overflow-y: auto; }
+        #globalError { margin: 0; padding: 6px 12px; }
     </style>
 </head>
 <body>
 <div class="container-fluid">
     <h2>Панель управления бронированиями</h2>
+    <!-- Глобальная строка ошибок -->
+    <div id="globalError" class="alert alert-danger hidden"></div>
 
     <!-- Блок авторизации -->
     <div id="authBlock" class="card p-3 mt-3">
@@ -39,72 +42,116 @@
             <button class="btn btn-sm btn-outline-danger" onclick="logout()">Выйти</button>
         </div>
 
-        <!-- Блок бронирований -->
-        <div class="card p-3">
-            <h5>Список бронирований</h5>
+        <!-- Вкладки -->
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <button class="nav-link active" id="tabBookings" data-bs-toggle="tab" data-bs-target="#paneBookings" type="button">Бронирования</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="tabPassengers" data-bs-toggle="tab" data-bs-target="#panePassengers" type="button">Пассажиры</button>
+            </li>
+        </ul>
 
-            <!-- Фильтры -->
-            <div class="row g-2 mb-3">
-                <div class="col-md-3">
-                    <input type="text" id="searchFilter" class="form-control form-control-sm" placeholder="Поиск (поезд, город)">
-                </div>
-                <div class="col-md-2">
-                    <select id="statusFilter" class="form-select form-select-sm">
-                        <option value="">Все статусы</option>
-                        <option value="CREATED">CREATED</option>
-                        <option value="CONFIRMED">CONFIRMED</option>
-                        <option value="PAID">PAID</option>
-                        <option value="COMPLETED">COMPLETED</option>
-                        <option value="CANCELLED">CANCELLED</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select id="archivedFilter" class="form-select form-select-sm">
-                        <option value="false">Активные</option>
-                        <option value="true">Архивные</option>
-                        <option value="">Все</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button class="btn btn-sm btn-primary w-100" onclick="loadBookings()">Применить</button>
-                </div>
-                <div class="col-md-3 text-end">
-                    <button class="btn btn-sm btn-success" onclick="showCreateForm()">+ Создать бронь</button>
+        <div class="tab-content">
+            <!-- ================= БРОНИРОВАНИЯ ================= -->
+            <div class="tab-pane fade show active" id="paneBookings">
+                <div class="card p-3">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <input type="text" id="searchFilter" class="form-control form-control-sm" placeholder="Поиск (поезд, город, код)">
+                        </div>
+                        <div class="col-md-2">
+                            <select id="statusFilter" class="form-select form-select-sm">
+                                <option value="">Все статусы</option>
+                                <option value="CREATED">CREATED</option>
+                                <option value="CONFIRMED">CONFIRMED</option>
+                                <option value="PAID">PAID</option>
+                                <option value="COMPLETED">COMPLETED</option>
+                                <option value="CANCELLED">CANCELLED</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select id="archivedFilter" class="form-select form-select-sm">
+                                <option value="false">Активные</option>
+                                <option value="true">Архивные</option>
+                                <option value="">Все</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-sm btn-primary w-100" onclick="loadBookings()">Применить</button>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button class="btn btn-sm btn-success" onclick="showBookingForm()">+ Создать бронь</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="table table-sm table-hover align-middle">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Код</th>
+                                <th>Поезд</th>
+                                <th>Маршрут</th>
+                                <th>Дата</th>
+                                <th>Пассажир</th>
+                                <th>Цена</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                            </thead>
+                            <tbody id="bookingsTable"></tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <span id="pageInfo" class="text-muted small"></span>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="prevPage()">Назад</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="nextPage()">Вперед</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Таблица -->
-            <div class="table-container">
-                <table class="table table-sm table-hover align-middle">
-                    <thead class="table-light">
-                    <tr>
-                        <th>Код</th>
-                        <th>Поезд</th>
-                        <th>Маршрут</th>
-                        <th>Дата</th>
-                        <th>Пассажир</th>
-                        <th>Цена</th>
-                        <th>Статус</th>
-                        <th>Действия</th>
-                    </tr>
-                    </thead>
-                    <tbody id="bookingsTable"></tbody>
-                </table>
-            </div>
-            <!-- Пагинация -->
-            <div class="d-flex justify-content-between align-items-center mt-2">
-                <span id="pageInfo" class="text-muted small"></span>
-                <div>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="prevPage()">Назад</button>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="nextPage()">Вперед</button>
+            <!-- ================= ПАССАЖИРЫ ================= -->
+            <div class="tab-pane fade" id="panePassengers">
+                <div class="card p-3">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <input type="text" id="passengerSearch" class="form-control form-control-sm" placeholder="Фильтр по ФИО/паспорту">
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-sm btn-primary" onclick="renderPassengers()">Фильтровать</button>
+                        </div>
+                        <div class="col-md-3 text-end offset-md-4">
+                            <button class="btn btn-sm btn-success" onclick="showPassengerForm()">+ Добавить пассажира</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="table table-sm table-hover align-middle">
+                            <thead class="table-light">
+                            <tr>
+                                <th>ФИО</th>
+                                <th>Паспорт</th>
+                                <th>Email</th>
+                                <th>Телефон</th>
+                                <th>Дата рождения</th>
+                                <th>Активен</th>
+                                <th>Действия</th>
+                            </tr>
+                            </thead>
+                            <tbody id="passengersTable"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Блок аналитики -->
         <div class="card p-3 mt-3">
-            <h5>Аналитика</h5>
+            <h5>Аналитика (статистика)</h5>
             <div id="analyticsBlock" class="row text-center"></div>
+            <div id="analyticsDetails" class="row mt-2 small"></div>
         </div>
 
         <!-- Блок аудита -->
@@ -117,41 +164,99 @@
         </div>
     </div>
 
-    <!-- Модальное окно создания -->
-    <div class="modal fade" id="createModal" tabindex="-1">
+    <!-- ================= МОДАЛКА БРОНИ ================= -->
+    <div class="modal fade" id="bookingModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Новая бронь</h5>
+                    <h5 class="modal-title" id="bookingModalTitle">Новая бронь</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-2">
-                        <input type="text" id="cTrain" class="form-control" placeholder="Номер поезда">
+                        <label class="form-label">Пассажир</label>
+                        <select id="cPassenger" class="form-select"></select>
+                        <div class="form-text" id="passengerHint"></div>
                     </div>
                     <div class="mb-2">
-                        <input type="text" id="cFrom" class="form-control" placeholder="Откуда">
+                        <label class="form-label">Номер поезда</label>
+                        <input type="text" id="cTrain" class="form-control" placeholder="Например 123А">
                     </div>
                     <div class="mb-2">
-                        <input type="text" id="cTo" class="form-control" placeholder="Куда">
+                        <label class="form-label">Откуда</label>
+                        <input type="text" id="cFrom" class="form-control" placeholder="Москва">
                     </div>
                     <div class="mb-2">
-                        <input type="date" id="cDate" class="form-control">
+                        <label class="form-label">Куда</label>
+                        <input type="text" id="cTo" class="form-control" placeholder="Санкт-Петербург">
                     </div>
-                    <div class="mb-2 row">
-                        <div class="col"><input type="number" id="cWagon" class="form-control" placeholder="Вагон"></div>
-                        <div class="col"><input type="number" id="cSeat" class="form-control" placeholder="Место"></div>
+                    <div class="mb-2 row g-2">
+                        <div class="col">
+                            <label class="form-label">Дата отправления</label>
+                            <input type="date" id="cDate" class="form-control">
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Время</label>
+                            <input type="time" id="cTime" class="form-control">
+                        </div>
+                    </div>
+                    <div class="mb-2 row g-2">
+                        <div class="col">
+                            <label class="form-label">Вагон</label>
+                            <input type="number" id="cWagon" class="form-control" min="1" placeholder="1">
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Место</label>
+                            <input type="number" id="cSeat" class="form-control" min="1" placeholder="1">
+                        </div>
                     </div>
                     <div class="mb-2">
-                        <input type="number" id="cPrice" class="form-control" placeholder="Цена">
-                    </div>
-                    <div class="mb-2">
-                        <input type="text" id="cPassId" class="form-control" placeholder="UUID пассажира">
+                        <label class="form-label">Цена, ₽</label>
+                        <input type="number" id="cPrice" class="form-control" min="0.01" step="0.01" placeholder="2500">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button class="btn btn-primary" onclick="createBooking()">Создать</button>
+                    <button class="btn btn-primary" onclick="saveBooking()">Создать</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= МОДАЛКА ПАССАЖИРА ================= -->
+    <div class="modal fade" id="passengerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="passengerModalTitle">Новый пассажир</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="pId">
+                    <div class="mb-2">
+                        <label class="form-label">ФИО</label>
+                        <input type="text" id="pFullName" class="form-control" placeholder="Иванов Иван Иванович">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Паспорт</label>
+                        <input type="text" id="pPassport" class="form-control" placeholder="4509 123456">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="pEmail" class="form-control" placeholder="ivanov@example.org">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Телефон</label>
+                        <input type="text" id="pPhone" class="form-control" placeholder="+79001112233">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Дата рождения</label>
+                        <input type="date" id="pBirthDate" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button class="btn btn-primary" id="pSaveBtn" onclick="savePassenger()">Создать</button>
                 </div>
             </div>
         </div>
@@ -164,13 +269,43 @@
     let currentPage = 0;
     const pageSize = 5;
 
+    // Кэш пассажиров для выпадающего списка и таблицы
+    let passengersCache = [];
+
     function showMain() {
         document.getElementById('authBlock').classList.add('hidden');
         document.getElementById('mainBlock').classList.remove('hidden');
-        document.getElementById('userEmail').innerText = "admin@railway.local";
+        document.getElementById('userEmail').innerText = localStorage.getItem('userEmail') || 'admin@railway.local';
+        loadPassengers();      // сначала пассажиры — они нужны для формы брони
         loadBookings();
         loadAnalytics();
         loadAudit();
+    }
+
+    function showGlobalError(message) {
+        const el = document.getElementById('globalError');
+        el.innerText = message;
+        el.classList.remove('hidden');
+        setTimeout(() => el.classList.add('hidden'), 8000);
+    }
+
+    // Универсальный вызов API: 401/403 -> разлогин, ошибка -> понятное сообщение
+    async function api(path, options = {}, okStatuses = [200, 201, 204]) {
+        const res = await fetch(path, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token,
+                ...(options.headers || {})
+            }
+        });
+        if (res.status === 401) { logout(); throw new Error('Сессия истекла, войдите снова'); }
+        if (res.status === 403) throw new Error('Недостаточно прав для этой операции');
+        const data = await res.json().catch(() => null); // 204 -> null
+        if (!okStatuses.includes(res.status)) {
+            throw new Error(data && data.message ? data.message : `Ошибка ${res.status}`);
+        }
+        return data;
     }
 
     // --- АВТОРИЗАЦИЯ ---
@@ -183,10 +318,14 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({email, password: pass})
             });
-            if (!res.ok) throw new Error('Неверный логин или пароль');
+            if (!res.ok) {
+                const err = await res.json().catch(() => null);
+                throw new Error(err && err.message ? err.message : 'Неверный логин или пароль');
+            }
             const data = await res.json();
             token = data.accessToken;
             localStorage.setItem('accessToken', token);
+            localStorage.setItem('userEmail', email);
             document.getElementById('loginError').innerText = '';
             showMain();
         } catch (e) {
@@ -196,7 +335,113 @@
 
     function logout() {
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('userEmail');
         location.reload();
+    }
+
+    // --- ПАССАЖИРЫ ---
+    async function loadPassengers() {
+        try {
+            passengersCache = await api('/api/passengers');
+            fillPassengerSelect();
+            renderPassengers();
+        } catch (e) {
+            showGlobalError('Не удалось загрузить пассажиров: ' + e.message);
+        }
+    }
+
+    function fillPassengerSelect(selectedId) {
+        const select = document.getElementById('cPassenger');
+        select.innerHTML = '';
+        const active = passengersCache.filter(p => p.active);
+        const hint = document.getElementById('passengerHint');
+        if (active.length === 0) {
+            select.innerHTML = '<option value="">— нет пассажиров, сначала добавьте на вкладке «Пассажиры» —</option>';
+            hint.innerText = 'Чтобы создать бронь, нужен хотя бы один активный пассажир.';
+            return;
+        }
+        hint.innerText = '';
+        for (const p of active) {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.innerText = `${p.fullName} (паспорт ${p.passportNumber})`;
+            if (selectedId && String(selectedId) === String(p.id)) opt.selected = true;
+            select.appendChild(opt);
+        }
+    }
+
+    function renderPassengers() {
+        const q = (document.getElementById('passengerSearch').value || '').toLowerCase();
+        const tbody = document.getElementById('passengersTable');
+        tbody.innerHTML = '';
+        passengersCache
+            .filter(p => !q || p.fullName.toLowerCase().includes(q) || p.passportNumber.toLowerCase().includes(q))
+            .forEach(p => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${esc(p.fullName)}</td>
+                    <td>${esc(p.passportNumber)}</td>
+                    <td>${esc(p.email)}</td>
+                    <td>${esc(p.phone)}</td>
+                    <td>${p.birthDate}</td>
+                    <td>${p.active ? '<span class="badge bg-success">активен</span>'
+                                  : '<span class="badge bg-secondary">отключён</span>'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="showPassengerForm('${p.id}')">Изменить</button>
+                        <button class="btn btn-sm btn-outline-warning" onclick="togglePassenger('${p.id}', ${!p.active})">
+                            ${p.active ? 'Отключить' : 'Включить'}
+                        </button>
+                    </td>`;
+                tbody.appendChild(tr);
+            });
+    }
+
+    function showPassengerForm(id) {
+        const p = passengersCache.find(x => x.id === id);
+        document.getElementById('passengerModalTitle').innerText = p ? 'Редактирование пассажира' : 'Новый пассажир';
+        document.getElementById('pId').value = p ? p.id : '';
+        document.getElementById('pFullName').value = p ? p.fullName : '';
+        document.getElementById('pPassport').value = p ? p.passportNumber : '';
+        document.getElementById('pEmail').value = p ? p.email : '';
+        document.getElementById('pPhone').value = p ? p.phone : '';
+        document.getElementById('pBirthDate').value = p ? p.birthDate : '';
+        document.getElementById('pSaveBtn').innerText = p ? 'Сохранить' : 'Создать';
+        new bootstrap.Modal(document.getElementById('passengerModal')).show();
+    }
+
+    async function savePassenger() {
+        const id = document.getElementById('pId').value;
+        const body = {
+            fullName: document.getElementById('pFullName').value.trim(),
+            passportNumber: document.getElementById('pPassport').value.trim(),
+            email: document.getElementById('pEmail').value.trim(),
+            phone: document.getElementById('pPhone').value.trim(),
+            birthDate: document.getElementById('pBirthDate').value
+        };
+        if (!body.fullName || !body.passportNumber || !body.email || !body.phone || !body.birthDate) {
+            alert('Заполните все поля пассажира');
+            return;
+        }
+        try {
+            if (id) {
+                await api('/api/passengers/' + id, {method: 'PUT', body: JSON.stringify(body)});
+            } else {
+                await api('/api/passengers', {method: 'POST', body: JSON.stringify(body)});
+            }
+            bootstrap.Modal.getInstance(document.getElementById('passengerModal')).hide();
+            await loadPassengers();
+        } catch (e) {
+            alert('Ошибка: ' + e.message);
+        }
+    }
+
+    async function togglePassenger(id, active) {
+        try {
+            await api(`/api/passengers/${id}/toggle?active=${active}`, {method: 'POST'});
+            await loadPassengers();
+        } catch (e) {
+            alert('Ошибка: ' + e.message);
+        }
     }
 
     // --- БРОНИРОВАНИЯ ---
@@ -210,110 +455,160 @@
         if (status) url += `&status=${status}`;
         if (archived !== "") url += `&archived=${archived}`;
 
-        const res = await fetch(url, {
-            headers: {'Authorization': 'Bearer ' + token}
-        });
-        if (res.status === 401 || res.status === 403) return logout();
-
-        const data = await res.json();
-        const tbody = document.getElementById('bookingsTable');
-        tbody.innerHTML = '';
-
-        data.content.forEach(b => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><small>${b.externalCode}</small></td>
-                <td>${b.trainNumber}</td>
-                <td>${b.routeFrom} → ${b.routeTo}</td>
-                <td>${b.departureDate} ${b.departureTime.substring(0,5)}</td>
-                <td>${b.passengerName}</td>
-                <td>${b.price}</td>
-                <td><span class="badge bg-secondary">${b.status}</span></td>
-                <td>
-                    ${b.archived
-                ? `<button class="btn btn-sm btn-outline-success" onclick="actionBooking('${b.id}', 'restore')">Восст.</button>`
-                : `<button class="btn btn-sm btn-outline-danger" onclick="actionBooking('${b.id}', 'archive')">В архив</button>`
+        try {
+            const data = await api(url);
+            const tbody = document.getElementById('bookingsTable');
+            tbody.innerHTML = '';
+            for (const b of data.content) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><small>${esc(b.externalCode)}</small></td>
+                    <td>${esc(b.trainNumber)}</td>
+                    <td>${esc(b.routeFrom)} → ${esc(b.routeTo)}</td>
+                    <td>${b.departureDate} ${b.departureTime ? b.departureTime.substring(0,5) : ''}</td>
+                    <td>${esc(b.passengerName)}</td>
+                    <td>${b.price}</td>
+                    <td><span class="badge bg-secondary">${b.status}</span>
+                        ${b.paid ? '<span class="badge bg-success">оплачено</span>' : ''}</td>
+                    <td>
+                        ${b.archived
+                    ? `<button class="btn btn-sm btn-outline-success" onclick="actionBooking('${b.id}', 'restore')">Восст.</button>`
+                    : `<button class="btn btn-sm btn-outline-danger" onclick="actionBooking('${b.id}', 'archive')">В архив</button>`}
+                    </td>`;
+                tbody.appendChild(tr);
             }
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        document.getElementById('pageInfo').innerText = `Страница ${data.page + 1} из ${data.totalPages} (Всего: ${data.totalElements})`;
+            document.getElementById('pageInfo').innerText =
+                `Страница ${data.page + 1} из ${data.totalPages} (Всего: ${data.totalElements})`;
+        } catch (e) {
+            showGlobalError('Не удалось загрузить брони: ' + e.message);
+        }
     }
 
     async function actionBooking(id, action) {
-        const method = action === 'archive' ? 'DELETE' : 'POST';
-        const url = action === 'archive' ? `/api/bookings/${id}` : `/api/bookings/${id}/restore`;
-        await fetch(url, {method, headers: {'Authorization': 'Bearer ' + token}});
-        loadBookings();
-        loadAnalytics();
+        try {
+            const method = action === 'archive' ? 'DELETE' : 'POST';
+            const url = action === 'archive' ? `/api/bookings/${id}` : `/api/bookings/${id}/restore`;
+            await api(url, {method});
+            loadBookings();
+            loadAnalytics();
+        } catch (e) {
+            showGlobalError(e.message);
+        }
     }
 
     function prevPage() { if (currentPage > 0) { currentPage--; loadBookings(); } }
     function nextPage() { currentPage++; loadBookings(); }
 
-    // --- АНАЛИТИКА ---
+    function showBookingForm() {
+        if (!passengersCache.some(p => p.active)) {
+            alert('Сначала добавьте пассажира на вкладке «Пассажиры» — без пассажира бронь создать нельзя.');
+            return;
+        }
+        document.getElementById('bookingModalTitle').innerText = 'Новая бронь';
+        fillPassengerSelect();
+        document.getElementById('cTrain').value = '';
+        document.getElementById('cFrom').value = '';
+        document.getElementById('cTo').value = '';
+        document.getElementById('cDate').value = '';
+        document.getElementById('cTime').value = '12:00';
+        document.getElementById('cWagon').value = '';
+        document.getElementById('cSeat').value = '';
+        document.getElementById('cPrice').value = '';
+        new bootstrap.Modal(document.getElementById('bookingModal')).show();
+    }
+
+    async function saveBooking() {
+        const passengerId = document.getElementById('cPassenger').value;
+        const train = document.getElementById('cTrain').value.trim();
+        const from = document.getElementById('cFrom').value.trim();
+        const to = document.getElementById('cTo').value.trim();
+        const date = document.getElementById('cDate').value;
+        const time = document.getElementById('cTime').value;
+        const wagon = parseInt(document.getElementById('cWagon').value, 10);
+        const seat = parseInt(document.getElementById('cSeat').value, 10);
+        const price = parseFloat(document.getElementById('cPrice').value);
+
+        if (!passengerId) { alert('Выберите пассажира (или добавьте нового на вкладке «Пассажиры»)'); return; }
+        if (!train || !from || !to) { alert('Заполните номер поезда и маршрут'); return; }
+        if (!date) { alert('Укажите дату отправления'); return; }
+        if (!Number.isInteger(wagon) || wagon < 1) { alert('Вагон — целое число от 1'); return; }
+        if (!Number.isInteger(seat) || seat < 1) { alert('Место — целое число от 1'); return; }
+        if (isNaN(price) || price <= 0) { alert('Цена должна быть положительным числом'); return; }
+
+        const body = {
+            passengerId,
+            trainNumber: train,
+            routeFrom: from,
+            routeTo: to,
+            departureDate: date,
+            departureTime: time ? time + ":00" : "12:00:00",
+            wagonNumber: wagon,
+            seatNumber: seat,
+            price,
+            paid: false
+        };
+        try {
+            await api('/api/bookings', {method: 'POST', body: JSON.stringify(body)});
+            bootstrap.Modal.getInstance(document.getElementById('bookingModal')).hide();
+            loadBookings();
+            loadAnalytics();
+        } catch (e) {
+            alert('Ошибка: ' + e.message);
+        }
+    }
+
+    // --- АНАЛИТИКА (статистика) ---
     async function loadAnalytics() {
-        const res = await fetch('/api/analytics/summary', {headers: {'Authorization': 'Bearer ' + token}});
-        const data = await res.json();
-        document.getElementById('analyticsBlock').innerHTML = `
-            <div class="col"><h6>Всего</h6><h3>${data.totalCount}</h3></div>
-            <div class="col"><h6>Активных</h6><h3>${data.activeCount}</h3></div>
-            <div class="col"><h6>В архиве</h6><h3>${data.archivedCount}</h3></div>
-            <div class="col"><h6>Средний чек</h6><h3>${data.averagePrice}</h3></div>
-            <div class="col"><h6>Оплачено</h6><h3>${data.paidCount}</h3></div>
-        `;
+        try {
+            const data = await api('/api/analytics/summary');
+            const badge = (name, count) =>
+                `<span class="badge bg-light text-dark border me-1">${name}: ${count}</span>`;
+            document.getElementById('analyticsBlock').innerHTML = `
+                <div class="col"><h6>Всего</h6><h3>${data.totalCount}</h3></div>
+                <div class="col"><h6>Активных</h6><h3>${data.activeCount}</h3></div>
+                <div class="col"><h6>В архиве</h6><h3>${data.archivedCount}</h3></div>
+                <div class="col"><h6>Средний чек</h6><h3>${data.averagePrice} ₽</h3></div>
+                <div class="col"><h6>Оплачено</h6><h3>${data.paidCount}</h3></div>
+                <div class="col"><h6>Не оплачено</h6><h3>${data.unpaidCount}</h3></div>`;
+            const statuses = data.byStatus
+                ? Object.entries(data.byStatus).map(([k, v]) => badge(k, v)).join('') : '';
+            const risks = data.byRiskLevel
+                ? Object.entries(data.byRiskLevel).map(([k, v]) => badge('риск ' + k, v)).join('') : '';
+            document.getElementById('analyticsDetails').innerHTML = `
+                <div class="col-12 mb-1"><b>По статусам:</b> ${statuses || '—'}</div>
+                <div class="col-12"><b>По уровням риска:</b> ${risks || '—'}</div>`;
+        } catch (e) {
+            document.getElementById('analyticsBlock').innerHTML =
+                `<div class="col text-danger">Статистика недоступна: ${esc(e.message)}</div>`;
+        }
     }
 
     // --- АУДИТ ---
     async function loadAudit() {
-        const res = await fetch('/api/admin/audit?page=0&size=10', {headers: {'Authorization': 'Bearer ' + token}});
-        const data = await res.json();
-        const tbody = document.getElementById('auditTable');
-        tbody.innerHTML = '';
-        data.content.forEach(a => {
-            tbody.innerHTML += `<tr>
-                <td>${new Date(a.createdAt).toLocaleString()}</td>
-                <td>${a.actorEmail || 'system'}</td>
-                <td>${a.eventType}</td>
-                <td>${a.description}</td>
-            </tr>`;
-        });
-    }
-
-    // --- МОДАЛЬНОЕ ОКНО ---
-    function showCreateForm() {
-        new bootstrap.Modal(document.getElementById('createModal')).show();
-    }
-
-    async function createBooking() {
-        const body = {
-            passengerId: document.getElementById('cPassId').value,
-            trainNumber: document.getElementById('cTrain').value,
-            routeFrom: document.getElementById('cFrom').value,
-            routeTo: document.getElementById('cTo').value,
-            departureDate: document.getElementById('cDate').value,
-            departureTime: "12:00:00",
-            wagonNumber: parseInt(document.getElementById('cWagon').value),
-            seatNumber: parseInt(document.getElementById('cSeat').value),
-            price: parseFloat(document.getElementById('cPrice').value),
-            paid: false
-        };
-
-        const res = await fetch('/api/bookings', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
-            body: JSON.stringify(body)
-        });
-
-        if (res.ok) {
-            bootstrap.Modal.getInstance(document.getElementById('createModal')).hide();
-            loadBookings();
-        } else {
-            const err = await res.json();
-            alert('Ошибка: ' + (err.message || 'Не удалось создать'));
+        try {
+            const data = await api('/api/admin/audit?page=0&size=10');
+            const tbody = document.getElementById('auditTable');
+            tbody.innerHTML = '';
+            for (const a of data.content) {
+                tbody.innerHTML += `<tr>
+                    <td>${new Date(a.createdAt).toLocaleString()}</td>
+                    <td>${esc(a.actorEmail || 'system')}</td>
+                    <td>${esc(a.eventType)}</td>
+                    <td>${esc(a.description)}</td>
+                </tr>`;
+            }
+        } catch (e) {
+            // журнал аудита доступен только админу — не ругаемся громко
+            document.getElementById('auditTable').innerHTML =
+                `<tr><td colspan="4" class="text-muted">Журнал недоступен: ${esc(e.message)}</td></tr>`;
         }
+    }
+
+    // Экранирование HTML, чтобы ФИО/названия не ломали разметку
+    function esc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>')
+            .replace(/"/g, '"').replace(/'/g, '&#39;');
     }
 
     // Инициализация при загрузке

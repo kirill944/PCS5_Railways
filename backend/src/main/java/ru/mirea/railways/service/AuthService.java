@@ -25,12 +25,14 @@ public class AuthService {
     private final PasswordPolicy policy;
     private final AppProperties props;
     private final AuditService audit;
+    private final LoginAttemptService attempts;
 
     public AuthService(UserAccountRepository users, RefreshSessionRepository sessions,
                        PasswordEncoder encoder, JwtService jwt, PasswordPolicy policy,
-                       AppProperties props, AuditService audit) {
+                       AppProperties props, AuditService audit, LoginAttemptService attempts) {
         this.users = users; this.sessions = sessions; this.encoder = encoder;
         this.jwt = jwt; this.policy = policy; this.props = props; this.audit = audit;
+        this.attempts = attempts;
     }
 
     @Transactional
@@ -39,19 +41,21 @@ public class AuthService {
                 .orElseThrow(() -> new BusinessException("Неверный логин или пароль"));
         if (!u.isEnabled()) throw new BusinessException("Учётная запись отключена");
         if (u.getLockedUntil() != null && u.getLockedUntil().isAfter(Instant.now()))
-            throw new BusinessException("Учётная запись временно заблокирована");
+            throw new BusinessException("Учётная запись временно заблокирована. Повторите позже");
         if (!encoder.matches(req.password(), u.getPasswordHash())) {
-            u.setFailedLoginAttempts(u.getFailedLoginAttempts() + 1);
-            if (u.getFailedLoginAttempts() >= props.security().maxFailedLoginAttempts()) {
-                u.setLockedUntil(Instant.now().plus(props.security().lockMinutes(), ChronoUnit.MINUTES));
-                u.setFailedLoginAttempts(0);
+            // Запись счётчика — в отдельной транзакции, иначе откат из-за
+            // BusinessException ниже отменял бы инкремент и блокировка не работала.
+            boolean locked = attempts.recordFailure(u);
+            if (locked) {
+                // REQUIRES_NEW: иначе событие откатится вместе с этим исключением
+                audit.logAs(u.getEmail(), "LOGIN_BLOCKED", "UserAccount", u.getId(),
+                        "Учётная запись заблокирована после серии неудачных попыток: " + u.getEmail());
+                throw new BusinessException("Слишком много неудачных попыток. "
+                        + "Учётная запись заблокирована на " + props.security().lockMinutes() + " мин.");
             }
-            users.save(u);
             throw new BusinessException("Неверный логин или пароль");
         }
-        u.setFailedLoginAttempts(0);
-        u.setLockedUntil(null);
-        users.save(u);
+        attempts.recordSuccess(u);
 
         String access = jwt.issueAccessToken(u);
         String refresh = issueRefresh(u.getId());
