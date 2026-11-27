@@ -35,7 +35,7 @@ public class UserAdminService {
     }
 
     @Transactional
-    public UserDto create(UserCreateRequest r) {
+    public UserCreatedDto create(UserCreateRequest r) {
         if (users.existsByEmailIgnoreCase(r.email()))
             throw new BusinessException("Пользователь уже существует");
         String temp = generateTempPassword();
@@ -49,9 +49,10 @@ public class UserAdminService {
         u.setMustChangePassword(true);
         users.save(u);
         audit.log("USER_CREATED", "UserAccount", u.getId(), "Создан пользователь: " + u.getEmail());
-        // Возвращаем временный пароль в ответе через отдельный DTO можно расширить,
-        // для краткости в UserDto он не отдаётся. В реальной сдаче добавьте поле temporaryPassword.
-        return toDto(u);
+        // Временный пароль возвращаем сразу: иначе администратор, создавший учётку,
+        // не смог бы под ней войти и был бы вынужден делать отдельный reset-password.
+        return new UserCreatedDto(u.getId(), u.getEmail(), u.getFullName(), u.getRole().name(),
+                u.isEnabled(), u.isMustChangePassword(), temp);
     }
 
     @Transactional

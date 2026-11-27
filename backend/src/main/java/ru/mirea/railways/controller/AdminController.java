@@ -2,6 +2,8 @@ package ru.mirea.railways.controller;
 
 import jakarta.validation.Valid;
 import org.springframework.data.domain.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.mirea.railways.domain.AuditEvent;
 import ru.mirea.railways.dto.*;
@@ -28,7 +30,9 @@ public class AdminController {
     }
 
     @PostMapping("/users")
-    public UserDto createUser(@Valid @RequestBody UserCreateRequest r) { return users.create(r); }
+    public ResponseEntity<UserCreatedDto> createUser(@Valid @RequestBody UserCreateRequest r) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(users.create(r));
+    }
 
     @PutMapping("/users/{id}")
     public UserDto updateUser(@PathVariable UUID id, @Valid @RequestBody UserUpdateRequest r) {
